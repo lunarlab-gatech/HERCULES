@@ -1,6 +1,6 @@
-# How to Use Car in Cosys-AirSim
+# How to Use Car in HERCULES
 
-By default Cosys-AirSim prompts user for which vehicle to use. You can easily change this by setting [SimMode](settings.md#SimMode). For example, if you want to use car instead then just set the SimMode in your [settings.json](settings.md) which you can find in your `~/Documents/AirSim` folder, like this:
+By default HERCULES prompts user for which vehicle to use. You can easily change this by setting [SimMode](settings.md#SimMode). For example, if you want to use car instead then just set the SimMode in your [settings.json](settings.md) which you can find in your `~/Documents/AirSim` folder, like this:
 
 ```
 {
@@ -9,7 +9,7 @@ By default Cosys-AirSim prompts user for which vehicle to use. You can easily ch
 }
 ```
 
-Now when you restart Cosys-AirSim, you should see the car spawned automatically.
+Now when you restart HERCULES, you should see the car spawned automatically.
 
 ## Manual Driving 
 Please use the keyboard arrow keys to drive manually. Spacebar for the handbrake. In manual drive mode, gears are set in "auto".

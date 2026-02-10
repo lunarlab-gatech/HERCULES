@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-import setup_path                     # ensure cosysairsim is on PYTHONPATH
-import cosysairsim as airsim
+import setup_path                     # ensure hercules is on PYTHONPATH
+import hercules as airsim
 import numpy as np
 from PIL import Image
 from datetime import datetime

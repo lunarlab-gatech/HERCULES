@@ -12,7 +12,7 @@ Multi-actor version (fixed):
 import math
 import numpy as np
 import setup_path
-import cosysairsim as airsim
+import hercules as airsim
 import cv2
 import csv
 
@@ -64,7 +64,7 @@ REFIT_SEARCH_MARGIN_PX             = 20
 VISIBLE_EPS_METERS = 1.0
 MAX_VISIBLE_PRINT  = 200
 
-CSV_PATH    = "/home/sgarimella34/multi-robot-coordination/Cosys-AirSim/csv_data/ue_label_vs_name.csv"
+CSV_PATH    = "/home/sgarimella34/multi-robot-coordination/HERCULES/csv_data/ue_label_vs_name.csv"
 KEYWORDS    = ("human", "car", "truck", "sedan", "suv", "vehicle")
 RANGE_MAX_M = 40.0
 

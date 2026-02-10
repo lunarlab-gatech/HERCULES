@@ -14,13 +14,13 @@ RUN apt-get install -y --no-install-recommends \
 RUN apt-get install -y --upgrade cmake
 
 RUN python3 -m pip install --upgrade pip && \
-pip3 install cosysairsim
+pip3 install hercules
 
 USER ue4
 RUN cd /home/ue4 && \
-	git clone --progress https://github.com/Cosys-Lab/Cosys-AirSim.git && \
+	git clone --progress https://github.com/Cosys-Lab/HERCULES.git && \
     git checkout 5.2.1 && \
-	cd Cosys-AirSim && \
+	cd HERCULES && \
 	./setup.sh && \
 	./build.sh
 

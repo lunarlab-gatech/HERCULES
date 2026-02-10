@@ -1,5 +1,5 @@
 classdef AirSimClient < handle
-    %AIRSIMCLIENT a Matlab client for Cosys-AirSim API. 
+    %AIRSIMCLIENT a Matlab client for HERCULES API. 
     % Most functions are available but some were not possible to implement.
     
     properties
@@ -47,13 +47,13 @@ classdef AirSimClient < handle
         end
 
         function carControls = getCarControls()
-            carClient = py.cosysairsim.CarClient();
+            carClient = py.hercules.CarClient();
             carClient.confirmConnection();
-            carControls = py.cosysairsim.CarControls();
+            carControls = py.hercules.CarControls();
         end
 
         function droneClient = getDroneControls()
-            droneClient = py.cosysairsim.MultirotorClient();
+            droneClient = py.hercules.MultirotorClient();
             droneClient.confirmConnection();
         end
 
@@ -436,15 +436,15 @@ classdef AirSimClient < handle
             end
 
             if cameraType == 1 || cameraType == 2 || cameraType == 3 || cameraType == 4
-                image_request = py.cosysairsim.ImageRequest(sensorName, int32(cameraType), true, false);
+                image_request = py.hercules.ImageRequest(sensorName, int32(cameraType), true, false);
             elseif cameraType == 10
-                image_request = py.cosysairsim.ImageRequest(sensorName, int32(cameraType), false, false, annotationLayer);
+                image_request = py.hercules.ImageRequest(sensorName, int32(cameraType), false, false, annotationLayer);
             else
-                image_request = py.cosysairsim.ImageRequest(sensorName, int32(cameraType), false, false);
+                image_request = py.hercules.ImageRequest(sensorName, int32(cameraType), false, false);
             end
             image_request_list = py.list({image_request});
             camera_image_response_request = obj.rpc_client.call("simGetImages", image_request_list, vehicleName);
-            image_response = py.cosysairsim.ImageResponse();
+            image_response = py.hercules.ImageResponse();
             camera_image = image_response.from_msgpack(camera_image_response_request{1});
             if cameraType == 1 || cameraType == 2 || cameraType == 3 || cameraType == 4
                 image_bytes = single(camera_image.image_data_float);
@@ -485,18 +485,18 @@ classdef AirSimClient < handle
             image_requests = [];
             for i = 1: numel(cameraTypes)
                 if cameraTypes(i) == 1 || cameraTypes(i) == 2 || cameraTypes(i) == 3 || cameraTypes(i) == 4
-                    image_requests{i} = py.cosysairsim.ImageRequest(sensorName, int32(cameraTypes(i)), true, false);
+                    image_requests{i} = py.hercules.ImageRequest(sensorName, int32(cameraTypes(i)), true, false);
                 elseif cameraTypes(i) == 10
-                    image_requests{i} = py.cosysairsim.ImageRequest(sensorName, int32(cameraTypes(i)), false, false, annotationLayers(i));
+                    image_requests{i} = py.hercules.ImageRequest(sensorName, int32(cameraTypes(i)), false, false, annotationLayers(i));
                 else
-                    image_requests{i} = py.cosysairsim.ImageRequest(sensorName, int32(cameraTypes(i)), false, false);
+                    image_requests{i} = py.hercules.ImageRequest(sensorName, int32(cameraTypes(i)), false, false);
                 end
             end
             image_request_list = py.list(image_requests);
             camera_image_response_request = obj.rpc_client.call("simGetImages", image_request_list, vehicleName);
 
             for i = 1: numel(cameraTypes)
-                image_response = py.cosysairsim.ImageResponse();
+                image_response = py.hercules.ImageResponse();
                 camera_image = image_response.from_msgpack(camera_image_response_request{i});
                 if cameraTypes(i) == 1 || cameraTypes(i) == 2 || cameraTypes(i) == 3 || cameraTypes(i) == 4
                     image_bytes = single(camera_image.image_data_float);
@@ -530,10 +530,10 @@ classdef AirSimClient < handle
             sensorPose.position = obj.nedToRightHandCoordinates(struct2array(struct(cameraData{"pose"}{"position"})));
             sensorPose.orientation = quatinv(struct2array(struct(cameraData{"pose"}{"orientation"})));
             curFov = cameraData{"fov"};
-            tempRequest = py.cosysairsim.ImageRequest(sensorName, int32(1), true, false);
+            tempRequest = py.hercules.ImageRequest(sensorName, int32(1), true, false);
             tempRequestList = py.list({tempRequest});
             tempCameraResponseRequest = obj.rpc_client.call("simGetImages", tempRequestList, vehicleName);
-            testImageResponse = py.cosysairsim.ImageResponse();
+            testImageResponse = py.hercules.ImageResponse();
             tempCameraImage = testImageResponse.from_msgpack(tempCameraResponseRequest{1});
             cameraWidth = tempCameraImage.width.int32;
             cameraHeight = tempCameraImage.height.int32;

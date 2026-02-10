@@ -5,7 +5,7 @@ import random
 
 import numpy as np
 import setup_path 
-import cosysairsim as airsim
+import hercules as airsim
 
 def radiance(absoluteTemperature, emissivity, dx=0.01, response=None):
     """Compute spectral radiance (Planck x emissivity x camera response)."""

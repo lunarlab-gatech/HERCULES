@@ -4,7 +4,7 @@ import setup_path
 import hashlib
 import json
 import os
-import cosysairsim as airsim
+import hercules as airsim
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -14,7 +14,7 @@ def stable_id(name: str) -> int:
     return (int(h, 16) % 254) + 1
 
 def main():
-    # Connect to HERCULES/Cosys-AirSim RPC server
+    # Connect to HERCULES/HERCULES RPC server
     client = airsim.MultirotorClient()
     client.confirmConnection()
 

@@ -5,8 +5,8 @@ import time
 import argparse
 import numpy as np
 import cv2
-import setup_path  # ensure this points to your Hercules/Cosys-AirSim PythonClient
-import cosysairsim as airsim
+import setup_path  # ensure this points to your Hercules/HERCULES PythonClient
+import hercules as airsim
 
 # Aliases
 ImageRequest = airsim.ImageRequest

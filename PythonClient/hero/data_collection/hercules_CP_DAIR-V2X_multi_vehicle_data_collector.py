@@ -2,7 +2,7 @@
 """
 collect_sim_to_dair_kitti.py
 
-Robust data collection + labeling pipeline for Hercules (Cosys-AirSim) simulator
+Robust data collection + labeling pipeline for Hercules (HERCULES) simulator
 to produce DAIR-V2X / KITTI-compatible data.
 
 Labels are generated in the same tick as the sensor data capture to preserve sync.
@@ -22,8 +22,8 @@ from collections import deque
 import numpy as np
 import cv2
 
-import setup_path  # ensure AirSim / Cosys-AirSim is on PYTHONPATH
-import cosysairsim as airsim  # your custom fork
+import setup_path  # ensure AirSim / HERCULES is on PYTHONPATH
+import hercules as airsim  # your custom fork
 
 # ------------------ USER CONFIG ------------------
 
@@ -55,7 +55,7 @@ DRONE_PORT = 41451
 HUSKY_PORT = 41452
 
 # --- mapping csv + filters (copied from detection script) ---
-CSV_PATH = "/home/sgarimella34/multi-robot-coordination/Cosys-AirSim/csv_data/ue_label_vs_name.csv"
+CSV_PATH = "/home/sgarimella34/multi-robot-coordination/HERCULES/csv_data/ue_label_vs_name.csv"
 KEYWORDS = (
     "human", "person", "pedestrian",
     "car", "truck", "sedan", "suv", "van", "bus", "vehicle",

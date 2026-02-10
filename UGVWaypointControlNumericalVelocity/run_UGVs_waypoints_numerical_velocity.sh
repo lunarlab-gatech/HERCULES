@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Absolute path to your UGV executable
-# EXECUTABLE_PATH=/home/sgarimella34/multi-robot-coordination/Cosys-AirSim/build_debug/output/bin/UGVWaypointControlNumericalVelocity
-EXECUTABLE_PATH=/home/sgarimella34/multi-robot-coordination/Cosys-AirSim/build_release/output/bin/UGVWaypointControlNumericalVelocity
-# EXECUTABLE_PATH=/home/dellg16ssg/multi-robot-coordination/Cosys-AirSim/build_release/output/bin/UGVWaypointControlNumericalVelocity
+# EXECUTABLE_PATH=/home/sgarimella34/multi-robot-coordination/HERCULES/build_debug/output/bin/UGVWaypointControlNumericalVelocity
+EXECUTABLE_PATH=/home/sgarimella34/multi-robot-coordination/HERCULES/build_release/output/bin/UGVWaypointControlNumericalVelocity
+# EXECUTABLE_PATH=/home/dellg16ssg/multi-robot-coordination/HERCULES/build_release/output/bin/UGVWaypointControlNumericalVelocity
 
 # Base path for waypoint files
 # BEVP random explore motion

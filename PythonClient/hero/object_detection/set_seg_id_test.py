@@ -1,5 +1,5 @@
 import setup_path                  # keep if you're using the local repo copy
-import cosysairsim as airsim
+import hercules as airsim
 import numpy as np
 import csv
 import cv2
@@ -12,10 +12,10 @@ VEHICLE_NAME  = ""  # empty for default / single-vehicle setups
 
 # where to dump / load the mesh-color CSV
 CSV_FILENAME      = "/home/sgarimella34/multi-robot-coordination/" \
-                    "Cosys-AirSim/csv_data/instance_segmentation_colormap.csv"
+                    "HERCULES/csv_data/instance_segmentation_colormap.csv"
 # where your UE label vs. mesh-name CSV lives
 UE_LABEL_CSV_PATH = "/home/sgarimella34/multi-robot-coordination/" \
-                    "Cosys-AirSim/csv_data/ue_label_vs_name.csv"
+                    "HERCULES/csv_data/ue_label_vs_name.csv"
 
 # if your raw segmentation image appears upside-down, set to True
 FLIP_VERTICAL = False
@@ -54,7 +54,7 @@ for name in matches:
     status = "OK" if ok else "FAIL"
     print(f" {status}: '{name}' → seg_id={SEG_ID}, color=RGB{color}")
 
-# 4. flush the Python-side colormap cache in cosys-airsim
+# 4. flush the Python-side colormap cache in hercules
 for attr in ("_segmentation_colormap",
              "segmentation_colormap",
              "_seg_colormap",

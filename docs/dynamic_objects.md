@@ -1,4 +1,4 @@
-# Setup Dynamic Objects for Scenario Environments for Cosys-AirSim
+# Setup Dynamic Objects for Scenario Environments for HERCULES
 
 The available environments often feature some custom-made dynamic blueprints that can be used to create random but deterministic change in your environment. 
 

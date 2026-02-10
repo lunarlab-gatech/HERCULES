@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # Open the first tab in the specified directory
-gnome-terminal --tab --working-directory="/home/dellg16ssg/multi-robot-coordination/Cosys-AirSim" \
---tab --working-directory="/home/dellg16ssg/multi-robot-coordination/Cosys-AirSim/Unreal/Environments/Blocks" \
---tab --working-directory="/home/dellg16ssg/multi-robot-coordination/Cosys-AirSim/UGVWaypointControl" \
---tab --working-directory="/home/dellg16ssg/multi-robot-coordination/Cosys-AirSim/DroneWaypointControl" \
---tab --working-directory="/home/dellg16ssg/multi-robot-coordination/Cosys-AirSim/ros2" \
---tab --working-directory="/home/dellg16ssg/multi-robot-coordination/Cosys-AirSim/ros2" \
---tab --working-directory="/home/dellg16ssg/multi-robot-coordination/Cosys-AirSim/ros2" \
---tab --working-directory="/home/dellg16ssg/multi-robot-coordination/Cosys-AirSim/ros2" \
+gnome-terminal --tab --working-directory="/home/dellg16ssg/multi-robot-coordination/HERCULES" \
+--tab --working-directory="/home/dellg16ssg/multi-robot-coordination/HERCULES/Unreal/Environments/Blocks" \
+--tab --working-directory="/home/dellg16ssg/multi-robot-coordination/HERCULES/UGVWaypointControl" \
+--tab --working-directory="/home/dellg16ssg/multi-robot-coordination/HERCULES/DroneWaypointControl" \
+--tab --working-directory="/home/dellg16ssg/multi-robot-coordination/HERCULES/ros2" \
+--tab --working-directory="/home/dellg16ssg/multi-robot-coordination/HERCULES/ros2" \
+--tab --working-directory="/home/dellg16ssg/multi-robot-coordination/HERCULES/ros2" \
+--tab --working-directory="/home/dellg16ssg/multi-robot-coordination/HERCULES/ros2" \
 --tab --working-directory="/home/dellg16ssg/Documents/AirSim"

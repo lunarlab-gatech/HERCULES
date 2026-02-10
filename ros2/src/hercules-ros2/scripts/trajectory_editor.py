@@ -12,7 +12,7 @@ Adds:
 
 Usage example:
 Run from the directory of the txt files e.g. /home/sgarimella34/multi-robot-coordination/trajectory_data/BEVP_customcity/
-python3 /home/sgarimella34/multi-robot-coordination/Cosys-AirSim/ros2/src/hercules-ros2/scripts/trajectory_editor.py \
+python3 /home/sgarimella34/multi-robot-coordination/HERCULES/ros2/src/hercules-ros2/scripts/trajectory_editor.py \
     --map /home/sgarimella34/multi-robot-coordination/trajectory_data/occupancy_grid_maps/customcity_0mAlt_OGM_0p5m.pgm \
     --traj Drone1_trajectory.txt Husky1_trajectory.txt
 """

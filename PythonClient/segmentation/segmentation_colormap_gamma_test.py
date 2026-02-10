@@ -1,4 +1,4 @@
-import cosysairsim as airsim
+import hercules as airsim
 import numpy as np
 import json
 

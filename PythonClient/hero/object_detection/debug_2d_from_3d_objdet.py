@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import setup_path                   # keep if you're using the local repo copy
-import cosysairsim as airsim
+import hercules as airsim
 import numpy as np
 import csv
 import cv2
@@ -12,11 +12,11 @@ CAMERA_NAME             = "front_center"
 VEHICLE_NAME            = ""  # empty for default / single-vehicle setups
 
 CSV_FILENAME            = "/home/sgarimella34/multi-robot-coordination/" \
-                          "Cosys-AirSim/csv_data/instance_segmentation_colormap.csv"
+                          "HERCULES/csv_data/instance_segmentation_colormap.csv"
 UE_LABEL_CSV_PATH       = "/home/sgarimella34/multi-robot-coordination/" \
-                          "Cosys-AirSim/csv_data/ue_label_vs_name.csv"
+                          "HERCULES/csv_data/ue_label_vs_name.csv"
 DEPTH_NPY_FILENAME      = "/home/sgarimella34/multi-robot-coordination/" \
-                          "Cosys-AirSim/csv_data/depth_frame.npy"
+                          "HERCULES/csv_data/depth_frame.npy"
 
 FLIP_VERTICAL           = False
 KEYWORDS                = ("human", "car", "truck", "sedan", "suv", "vehicle")

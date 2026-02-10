@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-ugv_teleop.py — Terminal keyboard teleop for AirSim/Cosys-AirSim UGVs (Husky).
+ugv_teleop.py — Terminal keyboard teleop for AirSim/HERCULES UGVs (Husky).
 
 Controls (hold or tap keys):
   W/S : throttle up/down
@@ -23,15 +23,15 @@ Usage:
   python3 ugv_teleop.py --vehicle Husky2 --port 41452 --hz 30
 
 Notes:
-- Works with both cosysairsim and upstream airsim Python APIs.
+- Works with both hercules and upstream airsim Python APIs.
 - Sends commands at a fixed rate; keypresses adjust the current command.
 """
 
 import sys, time, os, argparse, math, select, tty, termios, contextlib
 
-# --- Try Cosys-AirSim first (your setup), fall back to upstream 'airsim' ---
+# --- Try HERCULES first (your setup), fall back to upstream 'airsim' ---
 import setup_path
-import cosysairsim as airsim
+import hercules as airsim
 
 @contextlib.contextmanager
 def raw_keyboard():
@@ -61,7 +61,7 @@ def print_help():
     print(__doc__.split("Controls")[1].split("Usage")[0].strip())
 
 def main():
-    ap = argparse.ArgumentParser(description="Terminal teleop for AirSim/Cosys-AirSim UGVs")
+    ap = argparse.ArgumentParser(description="Terminal teleop for AirSim/HERCULES UGVs")
     ap.add_argument("--vehicle", default="Husky1", help="Vehicle name")
     ap.add_argument("--port", type=int, default=41452, help="RPC port for CarClient")
     ap.add_argument("--hz", type=float, default=30.0, help="Command update rate (Hz)")

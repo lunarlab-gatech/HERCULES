@@ -2,7 +2,7 @@
 """
 hercules_multi_vehicle_data_collector.py
 
-Pauses the Cosys-AirSim sim globally via the multirotor client, steps it at a fixed dt,
+Pauses the HERCULES sim globally via the multirotor client, steps it at a fixed dt,
 then collects synchronized IMU, odometry, camera, and LiDAR data from multiple multirotor
 drones and multiple Husky UGVs running on separate API ports.
 """
@@ -11,7 +11,7 @@ import setup_path
 import os
 import numpy as np
 import cv2
-import cosysairsim as airsim
+import hercules as airsim
 
 # Configuration
 DURATION        = 1200.0        # seconds

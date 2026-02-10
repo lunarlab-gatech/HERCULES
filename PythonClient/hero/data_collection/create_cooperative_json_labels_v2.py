@@ -7,8 +7,8 @@ import numpy as np
 
 # ==================== EDIT THIS PATH ====================
 # ROOT = Path("/home/sgarimella34/multi-robot-coordination/collaborative-perception-BEVP/datasets/dair_v2x_synth_TEST1/cooperative-vehicle-infrastructure")
-# ROOT = Path("/media/sgarimella34/hercules-collect/collaborative-perception-BEVP/dair_v2x_synth_FULL/cooperative-vehicle-infrastructure/")
-ROOT = Path("/home/sgarimella34/multi-robot-coordination/collaborative-perception-BEVP/datasets/DAIR-V2X-C-SUBSET1/cooperative-vehicle-infrastructure/")
+ROOT = Path("/home/dellg16ssg/multi-robot-coordination/collaborative-perception-BEVP/datasets/dair_v2x_synth_FULL/cooperative-vehicle-infrastructure/")
+# ROOT = Path("/home/sgarimella34/multi-robot-coordination/collaborative-perception-BEVP/datasets/DAIR-V2X-C-SUBSET1/cooperative-vehicle-infrastructure/")
 
 # ========================================================
 

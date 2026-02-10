@@ -1,6 +1,6 @@
 import setup_path 
 
-import cosysairsim as airsim
+import hercules as airsim
 client = airsim.MultirotorClient()
 client.confirmConnection()
 

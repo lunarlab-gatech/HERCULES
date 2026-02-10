@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import setup_path
-import cosysairsim as airsim
+import hercules as airsim
 import csv
 import random
 import numpy as np
@@ -27,7 +27,7 @@ if __name__ == '__main__':
     # In a dynamic world, this is never the same!!
     currentObjectList = client.simListInstanceSegmentationObjects()
     print("Generating list of all current objects...")
-    with open('/home/sgarimella34/multi-robot-coordination/Cosys-AirSim/PythonClient/segmentation/airsim_segmentation_colormap_list_' +  datetime.now().strftime("%Y_%m_%d_%H_%M_%S") + '.csv', 'w') as f:
+    with open('/home/sgarimella34/multi-robot-coordination/HERCULES/PythonClient/segmentation/airsim_segmentation_colormap_list_' +  datetime.now().strftime("%Y_%m_%d_%H_%M_%S") + '.csv', 'w') as f:
         f.write("ObjectName,R,G,B\n")
         for index, item in enumerate(currentObjectList):
             f.write("%s,%s\n" % (item, ','.join([str(x) for x in colorMap[index,:]])))
@@ -37,7 +37,7 @@ if __name__ == '__main__':
     # and store in list together with the object 3D pose
     currentPosesList = client.simListInstanceSegmentationPoses()
     print("Generating list of all current objects poses...")
-    with open('/home/sgarimella34/multi-robot-coordination/Cosys-AirSim/PythonClient/segmentation/airsim__poses_list_' +  datetime.now().strftime("%Y_%m_%d_%H_%M_%S") + '.csv', 'w') as f:
+    with open('/home/sgarimella34/multi-robot-coordination/HERCULES/PythonClient/segmentation/airsim__poses_list_' +  datetime.now().strftime("%Y_%m_%d_%H_%M_%S") + '.csv', 'w') as f:
         f.write("ObjectName,x_pos,y_pos,z_pos,w_qua,x_qua,y_qua,z_qua\n")
         for index, item in enumerate(currentObjectList):
             currentObjectPose = currentPosesList[index]
@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
     # Sort the objects from the list by class defined in the CSV and keep them in a dictionary with classname as key
     print("Sorting objects based on segmentation.csv into classes...")
-    with open('/home/sgarimella34/multi-robot-coordination/Cosys-AirSim/PythonClient/segmentation/segmentation.csv', encoding='utf-8-sig') as csv_file:
+    with open('/home/sgarimella34/multi-robot-coordination/HERCULES/PythonClient/segmentation/segmentation.csv', encoding='utf-8-sig') as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         index = 0
         classObjectMap = {}

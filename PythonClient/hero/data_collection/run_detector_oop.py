@@ -2,7 +2,7 @@
 # run_detector_oop.py (modified: no CLI args; switch vehicle in-code)
 
 import setup_path
-import cosysairsim as airsim
+import hercules as airsim
 from Hercules2D3DDetector import Hercules2D3DDetector as H
 
 # =========================

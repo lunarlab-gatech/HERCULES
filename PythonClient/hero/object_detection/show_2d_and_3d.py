@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-import setup_path                    # ensure cosysairsim is on PYTHONPATH
-import cosysairsim as airsim
+import setup_path                    # ensure hercules is on PYTHONPATH
+import hercules as airsim
 import cv2
 import numpy as np
 import open3d as o3d

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import setup_path
-import cosysairsim as airsim
+import hercules as airsim
 import os
 
 def generate_voxel_patch(client, center, patch_size, resolution, output_file):

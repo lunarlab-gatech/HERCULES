@@ -33,7 +33,7 @@
 * Updated to be compatible with Unreal 5.3. 
     * Note that 5.3 breaks debug rendering! Disable it to avoid issues in editor. [Fixed in 5.4](https://issues.unrealengine.com/issue/UE-199454)
     * Note that 5.3 and higher requires _r.DetailMode 2_ console command or scalability settings to be set to Epic to avoid issues with rendering the RGB scene camera sensor. More info [here](docs/unreal_custenv.md#unreal-scene-camera-bug).
-* Updated [ROS2 wrapper](docs/ros_cplusplus.md) to support Cosys-AirSim features and fix several issues:
+* Updated [ROS2 wrapper](docs/ros_cplusplus.md) to support HERCULES features and fix several issues:
     * Added support for annotation cameras.
     * Added support for GPU-Lidar and Echos sensors.
     * Added support for ground truth labels of Lidar sensor.
@@ -56,7 +56,7 @@
 * Updated settings with new parameter `MoveWorldOrigin` to move the world origin to the player start location when starting the simulator. Disabled by default. This affects things like setting the sensors to external!
 * Updated LiDAR sensor with parallelization to speed up pointcloud generation.
 * Updated Echo sensor with optional parallelization to speed up pointcloud generation. See echo documentation for more info.
-* Updated Python API module to be named cosysairsim and be installable from pip (`pip install cosysairsim`)
+* Updated Python API module to be named hercules (formerly cosysairsim) and be installable from pip (`pip install hercules`)
 * Updated Python API to now loads colormap from disk instead of regenerating each time and being very slow.
 * Updated [Matlab API Client](docs/matlab.md) implementation as an easy to install Matlab toolbox and completed all possible API functions (many untested!)
 * Fixed passive echo beacons data structure.
@@ -277,7 +277,7 @@
 ### November, 2018
 * Added Weather Effects and [APIs](apis.md#weather-apis)
 * Added [Time of Day API](apis.md#time-of-day-api)
-* An experimental integration of [AirSim on Unity](https://github.com/Cosys-Lab/Cosys-AirSim/blob/main/Unity) is now available. Learn more in [Unity blog post](https://blogs.unity3d.com/2018/11/14/airsim-on-unity-experiment-with-autonomous-vehicle-simulation). 
+* An experimental integration of [AirSim on Unity](https://github.com/Cosys-Lab/HERCULES/blob/main/Unity) is now available. Learn more in [Unity blog post](https://blogs.unity3d.com/2018/11/14/airsim-on-unity-experiment-with-autonomous-vehicle-simulation). 
 * [New environments](https://github.com/Microsoft/AirSim/releases/tag/v1.2.1): Forest, Plains (windmill farm), TalkingHeads (human head simulation), TrapCam (animal detection via camera)
 * Highly efficient [NoDisplay view mode](settings.md#viewmode) to turn off main screen rendering so you can capture images at high rate
 * [Enable/disable sensors](https://github.com/Microsoft/AirSim/pull/1479) via settings
@@ -288,7 +288,7 @@
 * [Custom speed units](https://github.com/Microsoft/AirSim/pull/1181)
 * [ROS publisher](https://github.com/Microsoft/AirSim/pull/1135)
 * [simSetObjectPose API](https://github.com/Microsoft/AirSim/pull/1161)
-* [Character Control APIs](https://github.com/Cosys-Lab/Cosys-AirSim/blob/main/PythonClient/airsim/client.py#L137) (works on TalkingHeads binaries in release)
+* [Character Control APIs](https://github.com/Cosys-Lab/HERCULES/blob/main/PythonClient/airsim/client.py#L137) (works on TalkingHeads binaries in release)
 * [Arducopter Solo Support](https://github.com/Microsoft/AirSim/pull/1387)
 * [Linux install without sudo access](https://github.com/Microsoft/AirSim/pull/1434)
 * [Kinect like ROS publisher](https://github.com/Microsoft/AirSim/pull/1298)

@@ -50,7 +50,7 @@ public:
                           std::string("/hercules_node/Drone1/front_center_ThermalIR/image"));
 
         declare_parameter("label_map_csv",
-                          std::string("/home/sgarimella34/multi-robot-coordination/Cosys-AirSim/PythonClient/segmentation/label_color_map_ausenvkangaroos.csv"));
+                          std::string("/home/sgarimella34/multi-robot-coordination/HERCULES/PythonClient/segmentation/label_color_map_ausenvkangaroos.csv"));
 
         get_parameter("scene_topic", scene_topic_);
         get_parameter("seg_topic", seg_topic_);

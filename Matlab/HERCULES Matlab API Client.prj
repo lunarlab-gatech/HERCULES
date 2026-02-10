@@ -1,15 +1,15 @@
 <deployment-project plugin="plugin.toolbox" plugin-version="1.0">
-  <configuration build-checksum="3699191630" file="D:\BigProjects\Cosys-AirSim-Public\Matlab\Cosys-AirSim Matlab API Client.prj" location="D:\BigProjects\Cosys-AirSim-Public\Matlab" name="Cosys-AirSim Matlab API Client" target="target.toolbox" target-name="Package Toolbox">
-    <param.appname>Cosys-AirSim Matlab API Client</param.appname>
+  <configuration build-checksum="3699191630" file="D:\BigProjects\HERCULES-Public\Matlab\HERCULES Matlab API Client.prj" location="D:\BigProjects\HERCULES-Public\Matlab" name="HERCULES Matlab API Client" target="target.toolbox" target-name="Package Toolbox">
+    <param.appname>HERCULES Matlab API Client</param.appname>
     <param.authnamewatermark>Wouter Jansen</param.authnamewatermark>
     <param.email>wouter.jansen@uantwerpen.be</param.email>
     <param.company>Cosys-Lab, University of Antwerp</param.company>
-    <param.summary>This a client implementation of the RPC API for Matlab for the Cosys-AirSim simulation framework.</param.summary>
-    <param.description>This a client implementation of the RPC API for Matlab for the Cosys-AirSim simulation framework. A main class AirSimClient is available which implements all API calls.
+    <param.summary>This a client implementation of the RPC API for Matlab for the HERCULES simulation framework.</param.summary>
+    <param.description>This a client implementation of the RPC API for Matlab for the HERCULES simulation framework. A main class AirSimClient is available which implements all API calls.
 Do note that at this point not all functions have been tested and most function documentation was auto-generated. This is still a WIP client.</param.description>
-    <param.screenshot>D:\BigProjects\Cosys-AirSim-Public\promo\thumbnail_matlab.png</param.screenshot>
+    <param.screenshot>D:\BigProjects\HERCULES-Public\promo\thumbnail_matlab.png</param.screenshot>
     <param.version>3.2.0.0</param.version>
-    <param.output>${PROJECT_ROOT}\Cosys-AirSim Matlab API Client.mltbx</param.output>
+    <param.output>${PROJECT_ROOT}\HERCULES Matlab API Client.mltbx</param.output>
     <param.products.name>
       <item>Aerospace Toolbox</item>
       <item>Computer Vision Toolbox</item>
@@ -121,7 +121,7 @@ Do note that at this point not all functions have been tested and most function 
     <fileset.depfun.excluded />
     <fileset.package />
     <build-deliverables>
-      <file location="${PROJECT_ROOT}" name="Cosys-AirSim Matlab API Client.mltbx" optional="false">D:\BigProjects\Cosys-AirSim-Public\Matlab\Cosys-AirSim Matlab API Client.mltbx</file>
+      <file location="${PROJECT_ROOT}" name="HERCULES Matlab API Client.mltbx" optional="false">D:\BigProjects\HERCULES-Public\Matlab\HERCULES Matlab API Client.mltbx</file>
     </build-deliverables>
     <workflow />
     <matlab>

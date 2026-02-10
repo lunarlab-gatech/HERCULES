@@ -14,7 +14,7 @@ correspond to the same simulation time-step.
 import math, re
 import numpy as np
 import setup_path
-import cosysairsim as airsim
+import hercules as airsim
 import cv2
 import csv
 from collections import defaultdict
@@ -99,7 +99,7 @@ VISIBLE_EPS_METERS = 1.0
 MAX_VISIBLE_PRINT  = 200
 
 # --- mapping csv + filters ---
-CSV_PATH      = "/home/sgarimella34/multi-robot-coordination/Cosys-AirSim/csv_data/ue_label_vs_name.csv"
+CSV_PATH      = "/home/sgarimella34/multi-robot-coordination/HERCULES/csv_data/ue_label_vs_name.csv"
 KEYWORDS = (
     "human", "person", "pedestrian",
     "car", "truck", "sedan", "suv", "van", "bus", "vehicle",

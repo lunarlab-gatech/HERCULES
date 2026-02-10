@@ -8,4 +8,4 @@ exclude multirotor/*
 exclude reinforcement_learning/*
 exclude segmentation/*
 global-exclude setup_path.py
-include cosysairsim/colormap.npy
+include hercules/colormap.npy

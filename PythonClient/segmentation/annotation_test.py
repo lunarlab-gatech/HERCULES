@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import setup_path
-import cosysairsim as airsim
+import hercules as airsim
 import csv
 import random
 import numpy as np

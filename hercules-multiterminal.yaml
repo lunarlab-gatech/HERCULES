@@ -4,19 +4,19 @@ windows:
     layout: tiled
     panes:
       - shell_command:
-          - cd ~/multi-robot-coordination/Cosys-AirSim/UGVWaypointControl
+          - cd ~/multi-robot-coordination/HERCULES/UGVWaypointControl
           - echo "./run_UGVs_waypoints.sh 2"
           - read -p "Press enter to run the above command"
       - shell_command:
-          - cd ~/multi-robot-coordination/Cosys-AirSim/DroneWaypointControl
+          - cd ~/multi-robot-coordination/HERCULES/DroneWaypointControl
           - echo "./run_drones_waypoints.sh 2"
           - read -p "Press enter to run the above command"
       - shell_command:
-          - cd ~/multi-robot-coordination/Cosys-AirSim/ros2
+          - cd ~/multi-robot-coordination/HERCULES/ros2
           - echo "ros2 launch airsim_ros_pkgs airsim_node_hercules.launch.py host_port:=41451 publish_clock:=True"
           - read -p "Press enter to run the above command"
       - shell_command:
-          - cd ~/multi-robot-coordination/Cosys-AirSim/ros2
+          - cd ~/multi-robot-coordination/HERCULES/ros2
           - echo "ros2 launch airsim_ros_pkgs airsim_node_hercules.launch.py host_port:=41452 publish_clock:=False"
           - read -p "Press enter to run the above command"
       - shell_command:
@@ -24,6 +24,6 @@ windows:
           - echo "ros2 bag record -a -o /media/dellg16ssg/hercules-collect/hercules-datasets/"
           - read -p "Press enter to run the above command"
       - shell_command:
-          - cd ~/multi-robot-coordination/Cosys-AirSim/ros2
+          - cd ~/multi-robot-coordination/HERCULES/ros2
           - echo "ros2 topic list"
           - read -p "Press enter to run the above command"

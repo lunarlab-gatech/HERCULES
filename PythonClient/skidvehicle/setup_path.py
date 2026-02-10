@@ -42,7 +42,7 @@ class SetupPath:
 
         parent = SetupPath.getParentDir()
         if parent !=  '':
-            airsim_path = os.path.join(parent, 'cosysairsim')
+            airsim_path = os.path.join(parent, 'hercules')
             client_path = os.path.join(airsim_path, 'client.py')
             if os.path.exists(client_path):
                 sys.path.insert(0, parent)

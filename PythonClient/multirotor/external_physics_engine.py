@@ -1,5 +1,5 @@
 import setup_path 
-import cosysairsim as airsim
+import hercules as airsim
 import time
 
 # This example shows how to use the External Physics Engine

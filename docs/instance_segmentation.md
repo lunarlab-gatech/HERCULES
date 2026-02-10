@@ -1,6 +1,6 @@
-# Instance Segmentation in Cosys-AirSim
+# Instance Segmentation in HERCULES
 
-An Instance segmentation system is implemented into Cosys-AirSim. It uses Proxy Mesh rendering to allow for each object in the world to get its own color.
+An Instance segmentation system is implemented into HERCULES. It uses Proxy Mesh rendering to allow for each object in the world to get its own color.
 
 ## Limitations
 * 2744000 different colors are currently available to be assigned to unique objects. If your environment during a run requires more colors, you will generate errors and new objects will be assigned color [0,0,0].
@@ -14,9 +14,9 @@ An Instance segmentation system is implemented into Cosys-AirSim. It uses Proxy 
 By default, at the start of the simulation, it will give a random color to each object. You can disable this by setting the main parameter `InitialInstanceSegmentation` to false in the settings.json file.
 Please see the [Image API documentation](image_apis.md#segmentation) on how to manually set or get the color information.
 
-For an example of the Instance Segmentation API, please see the script _segmentation_test.py_ (Cosys-Airsim/PythonClient/segmentation/segmentation_test.py).
+For an example of the Instance Segmentation API, please see the script _segmentation_test.py_ (HERCULES/PythonClient/segmentation/segmentation_test.py).
 
-For a script that generates a full list of objects and their associated color, please see the script _segmentation_generate_list.py_ (Cosys-Airsim/PythonClient/segmentation/segmentation_generate_list.py).
+For a script that generates a full list of objects and their associated color, please see the script _segmentation_generate_list.py_ (HERCULES/PythonClient/segmentation/segmentation_generate_list.py).
 
 When a new object is spawned in your environment by for example a c++ or blueprint extension you made,
 and you want it to work with the instance segmentation system, you can use the extended function `ASimModeBase::AddNewActorToSegmentation(AActor)` which is also available in blueprints.

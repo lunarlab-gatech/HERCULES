@@ -3,7 +3,7 @@
 Simple script to retrieve a scene image and project a 3D bounding box onto it using AirSim's built-in projection matrix.
 """
 import setup_path
-import cosysairsim as airsim
+import hercules as airsim
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 

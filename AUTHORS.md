@@ -10,7 +10,7 @@ Afterwards, Cosys-Lab researchers have started to add new features and improveme
 
 # Cosys-Lab publications
 
-- [Cosys-AirSim: A Real-Time Simulation Framework Expanded for Complex Industrial Applications](https://arxiv.org/abs/2303.13381)
+- [HERCULES: A Real-Time Simulation Framework Expanded for Complex Industrial Applications](https://arxiv.org/abs/2303.13381)
 ```
 @inproceedings{cosysairsim2023jansen,
   author={Jansen, Wouter and Verreycken, Erik and Schenck, Anthony and Blanquart, Jean-Edouard and Verhulst, Connor and Huebel, Nico and Steckel, Jan},

@@ -1,5 +1,5 @@
-# Cosys-AirSim on Docker in Linux
-We've two options for docker. You can either build an image for running [Cosys-AirSim binaries](#runtime-binaries), or for compiling Cosys-AirSim [from source](#source).
+# HERCULES on Docker in Linux
+We've two options for docker. You can either build an image for running [HERCULES binaries](#runtime-binaries), or for compiling HERCULES [from source](#source).
 
 ## Runtime Binaries
 
@@ -24,7 +24,7 @@ python build_airsim_image.py \
  `docker images | grep airsim`
 
 #### Running an unreal binary inside a docker container
-- Get a Linux packaged Unreal project binary like the Blocks packaged binary example [found in the releases of Cosys-AirSim](https://github.com/Cosys-Lab/Cosys-AirSim/releases) or package your own project in Ubuntu.
+- Get a Linux packaged Unreal project binary like the Blocks packaged binary example [found in the releases of HERCULES](https://github.com/Cosys-Lab/HERCULES/releases) or package your own project in Ubuntu.
 Let's take the Blocks project binary as an example.
 You can download it by running
 
@@ -59,9 +59,9 @@ xhost +local:docker
  - [Follow this guide for preparing setting up your GitHub access, installing Docker and authenticating with the GitHub Container Registry.](https://dev.epicgames.com/documentation/en-us/unreal-engine/quick-start-guide-for-using-container-images-in-unreal-engine).
  - [And this guide for installing Nvidia Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
 
-#### Building Cosys-AirSim inside UE5 dev docker container:
+#### Building HERCULES inside UE5 dev docker container:
 - Below are the default arguments.
-  `--base_image`: This is image over which we'll install Cosys-AirSim. We've tested only the official Unreal Engine dev container, more info can be found [here](https://dev.epicgames.com/documentation/en-us/unreal-engine/overview-of-containers-in-unreal-engine). Change the base image at your own risk. This image includes everything needed and includes a pre-installed Unreal Engine and editor. 
+  `--base_image`: This is image over which we'll install HERCULES. We've tested only the official Unreal Engine dev container, more info can be found [here](https://dev.epicgames.com/documentation/en-us/unreal-engine/overview-of-containers-in-unreal-engine). Change the base image at your own risk. This image includes everything needed and includes a pre-installed Unreal Engine and editor. 
    `--target_image` is the desired name of your docker image.
    Defaults to `airsim_source` with same tag as the base image
 
@@ -73,7 +73,7 @@ $ python build_airsim_image.py \
    --target_image=airsim_source:dev-5.2.1
 ```
 
-#### Running Cosys-AirSim container
+#### Running HERCULES container
 * Run the airsim source image we built by:
 
 ```bash
@@ -84,15 +84,15 @@ xhost +local:docker
    Syntax is `./run_airsim_image_source.sh DOCKER_IMAGE_NAME`
    Do not forget to run the xhost command first to bind the X11 to docker.
 
-* Inside the container, you can see `UnrealEngine` and `Cosys-AirSim` under `/home/ue4`.
+* Inside the container, you can see `UnrealEngine` and `HERCULES` under `/home/ue4`.
 * Start unreal engine inside the container:
    `/home/ue4/UnrealEngine/Engine/Binaries/Linux/UnrealEditor`
 * [Specifying an airsim settings.json](#specifying-settingsjson)
-* Continue with [Cosys-AirSims's Linux docs](install_linux.md#build-unreal-environment).
+* Continue with [HERCULESs's Linux docs](install_linux.md#build-unreal-environment).
   For example start the Blocks environment in the container run (This will first copy the plugin and afterwards start open the project with the Unreal Editor):
 ```bash
-/home/ue4/Cosys-AirSim/Unreal/Environments/Blocks/update_from_git.sh
-/home/ue4/UnrealEngine/Engine/Binaries/Linux/UnrealEditor /home/ue4/Cosys-AirSim/Unreal/Environments/Blocks/Blocks.uproject
+/home/ue4/HERCULES/Unreal/Environments/Blocks/update_from_git.sh
+/home/ue4/UnrealEngine/Engine/Binaries/Linux/UnrealEditor /home/ue4/HERCULES/Unreal/Environments/Blocks/Blocks.uproject
 ```
 
 #### Packaging Unreal Environments in `airsim_source` containers
@@ -102,7 +102,7 @@ xhost +local:docker
 ```bash
 /home/ue4/UnrealEngine/Engine/Build/BatchFiles/RunUAT.sh BuildCookRun -platform=Linux -clientconfig=Development -serverconfig=Development -noP4 -cook -allmaps -build -stage -prereqs -pak -archive \
 -archivedirectory=/home/ue4/Binaries/Blocks/ \
--project=/home/ue4/Cosys-AirSim/Unreal/Environments/Blocks/Blocks.uproject
+-project=/home/ue4/HERCULES/Unreal/Environments/Blocks/Blocks.uproject
 ```
 
 This would create a Blocks binary in `/home/ue4/Binaries/Blocks/`.
@@ -111,7 +111,7 @@ You can test it by running `/home/ue4/Binaries/Blocks/LinuxNoEditor/Blocks.sh -w
 ## Specifying settings.json
 #### `airsim_binary` docker image:
   - We're mapping the host machine's `PATH/TO/Airsim/settings.json` to the docker container's `/home/airsim_user/Documents/airsim/settings.json`.
-  - Hence, we can load any settings file by simply modifying `PATH_TO_YOUR/settings.json` by modifying the following snippets in [`run_airsim_image_binary.sh`](https://github.com/Cosys-Lab/Cosys-AirSim/blob/main/docker/run_airsim_image_binary.sh) to link `$PATH_TO_YOUR` to the correct folder. 
+  - Hence, we can load any settings file by simply modifying `PATH_TO_YOUR/settings.json` by modifying the following snippets in [`run_airsim_image_binary.sh`](https://github.com/Cosys-Lab/HERCULES/blob/main/docker/run_airsim_image_binary.sh) to link `$PATH_TO_YOUR` to the correct folder. 
 
 ```sh
 $DOCKER_CMD -it \
@@ -124,8 +124,8 @@ $DOCKER_IMAGE_NAME \
 
 ####  `airsim_source` docker image:
 
-  * We're mapping the host machine's `PATH/TO/Cosys-AirSim/settings.json` to the docker container's `/home/ue4/Documents/airsim/settings.json`.
-  * Hence, we can load any settings file by simply modifying `PATH_TO_YOUR/settings.json` by modifying the following snippets in [`run_airsim_image_source.sh`](https://github.com/Cosys-Lab/Cosys-AirSim/blob/main/docker/run_airsim_image_source.sh):
+  * We're mapping the host machine's `PATH/TO/HERCULES/settings.json` to the docker container's `/home/ue4/Documents/airsim/settings.json`.
+  * Hence, we can load any settings file by simply modifying `PATH_TO_YOUR/settings.json` by modifying the following snippets in [`run_airsim_image_source.sh`](https://github.com/Cosys-Lab/HERCULES/blob/main/docker/run_airsim_image_source.sh):
 
 ```sh
 $DOCKER_CMD -it \

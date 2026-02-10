@@ -8,7 +8,7 @@ Usage:
     3. Output `seg_colors.csv` will be written with a class -> RGB mapping
 """
 import setup_path 
-import cosysairsim as airsim
+import hercules as airsim
 import numpy as np
 import csv
 
@@ -30,7 +30,7 @@ for cls_id in range(256):
     print(f"{cls_id}\t{color}")
     colors[cls_id] = color
 
-with open('/home/sgarimella34/multi-robot-coordination/Cosys-AirSim/csv_data/instance_segmentation_table.csv', 'w') as f:
+with open('/home/sgarimella34/multi-robot-coordination/HERCULES/csv_data/instance_segmentation_table.csv', 'w') as f:
     writer = csv.writer(f, delimiter=' ')
     for k, v in colors.items():
         writer.writerow([k] + list(v))

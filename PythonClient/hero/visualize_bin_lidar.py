@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-visualize_bin_lidar.py — Open3D viewer for AirSim/Cosys-AirSim LiDAR saved as .npy
+visualize_bin_lidar.py — Open3D viewer for AirSim/HERCULES LiDAR saved as .npy
 
 Usage:
   python3 visualize_bin_lidar.py /path/to/points.npy --frame ned --voxel 0.05

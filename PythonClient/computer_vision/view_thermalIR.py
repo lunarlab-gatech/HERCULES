@@ -4,7 +4,7 @@ import time
 import numpy as np
 import cv2
 import setup_path 
-import cosysairsim as airsim
+import hercules as airsim
 
 def get_ir_frame(client, camera_name="front_center"):
     # 1) request a raw, uncompressed IR image

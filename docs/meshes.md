@@ -1,6 +1,6 @@
 # How to Access Meshes in AIRSIM
 
-Cosys-AirSim supports the ability to access the static meshes that make up the scene.
+HERCULES supports the ability to access the static meshes that make up the scene.
 
 
 ## Mesh structure
@@ -32,7 +32,7 @@ Note that you will have to use a 3rdparty library or your own custom code to act
 Python bindings of [libigl](https://github.com/libigl/libigl) to visualize the received meshes.
 
 ```python
-import cosysairsim as airsim
+import hercules as airsim
 
 AIRSIM_HOST_IP='127.0.0.1'
 

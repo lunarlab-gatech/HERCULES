@@ -1,5 +1,5 @@
 # setup_path.py
-# Robust path helper to import local cosysairsim from anywhere in nested folders.
+# Robust path helper to import local hercules from anywhere in nested folders.
 
 import os
 import sys
@@ -32,26 +32,26 @@ class SetupPath:
         return os.path.dirname(cur_filepath)
 
     @staticmethod
-    def addCosysAirSimModulePath():
+    def addHerculesModulePath():
         # 1) If already importable (pip/install), do nothing
-        if importlib.util.find_spec("cosysairsim") is not None:
+        if importlib.util.find_spec("hercules") is not None:
             return
 
-        # 2) Environment override: COSYSAIRSIM_PATH can point to either the package
-        #    directory (.../cosysairsim) or its parent (which contains 'cosysairsim')
-        env_path = os.environ.get("COSYSAIRSIM_PATH")
+        # 2) Environment override: HERCULES_PATH can point to either the package
+        #    directory (.../hercules) or its parent (which contains 'hercules')
+        env_path = os.environ.get("HERCULES_PATH")
         if env_path:
             env_path = os.path.abspath(env_path)
             pkg_parent = (os.path.dirname(env_path)
-                          if os.path.basename(env_path) == "cosysairsim" else env_path)
-            if os.path.isdir(os.path.join(pkg_parent, "cosysairsim")):
+                          if os.path.basename(env_path) == "hercules" else env_path)
+            if os.path.isdir(os.path.join(pkg_parent, "hercules")):
                 if pkg_parent not in sys.path:
                     sys.path.insert(0, pkg_parent)
                 return
 
         # 3) Walk upwards from this file's directory to find the local package
         cur_dir = SetupPath._this_file_dir()
-        pkg_dir = _find_upwards(cur_dir, "cosysairsim")
+        pkg_dir = _find_upwards(cur_dir, "hercules")
         if pkg_dir:
             parent = os.path.dirname(pkg_dir)  # We add the directory *containing* the package
             if parent not in sys.path:
@@ -59,8 +59,8 @@ class SetupPath:
             return
 
         logging.warning(
-            "cosysairsim module not found in parent directories. "
-            "Falling back to installed package (pip install cosysairsim)."
+            "hercules module not found in parent directories. "
+            "Falling back to installed package (pip install hercules)."
         )
 
-SetupPath.addCosysAirSimModulePath()
+SetupPath.addHerculesModulePath()

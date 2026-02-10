@@ -15,8 +15,8 @@ Minimal script to:
 
 import math
 import numpy as np
-import setup_path                    # ensure cosysairsim is on PYTHONPATH
-import cosysairsim as airsim
+import setup_path                    # ensure hercules is on PYTHONPATH
+import hercules as airsim
 import cv2
 import csv
 from collections import defaultdict
@@ -78,7 +78,7 @@ MAX_VISIBLE_PRINT  = 200          # cap how many names we print
 
 
 # --- NEW CONFIG: mapping csv + filters ---
-CSV_PATH      = "/home/sgarimella34/multi-robot-coordination/Cosys-AirSim/csv_data/ue_label_vs_name.csv"  # two columns: actor_label,IDname (header optional)
+CSV_PATH      = "/home/sgarimella34/multi-robot-coordination/HERCULES/csv_data/ue_label_vs_name.csv"  # two columns: actor_label,IDname (header optional)
 KEYWORDS      = ("human", "car", "truck", "sedan", "suv", "vehicle")
 RANGE_MAX_M   = 40.0
 

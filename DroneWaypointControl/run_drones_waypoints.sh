@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # Absolute path to your executable
-# EXECUTABLE_PATH=/home/sgarimella34/multi-robot-coordination/Cosys-AirSim/build_debug/output/bin/DroneWaypointControl
-EXECUTABLE_PATH=/home/sgarimella34/multi-robot-coordination/Cosys-AirSim/build_release/output/bin/DroneWaypointControl
-# EXECUTABLE_PATH=/home/dellg16ssg/multi-robot-coordination/Cosys-AirSim/build_release/output/bin/DroneWaypointControl
+# EXECUTABLE_PATH=/home/sgarimella34/multi-robot-coordination/HERCULES/build_debug/output/bin/DroneWaypointControl
+EXECUTABLE_PATH=/home/sgarimella34/multi-robot-coordination/HERCULES/build_release/output/bin/DroneWaypointControl
+# EXECUTABLE_PATH=/home/dellg16ssg/multi-robot-coordination/HERCULES/build_release/output/bin/DroneWaypointControl
 
 # Base path for waypoint files
 # BEVP random explore motion

@@ -394,7 +394,7 @@ PythonClient/docs/_build
 
 # clangd generated folder, for e.g. from VSCode clangd extension
 .cache/
-/PythonClient/cosysairsim.egg-info/
+/PythonClient/hercules.egg-info/
 .vscode/
 .vscode/settings.json
 /site/

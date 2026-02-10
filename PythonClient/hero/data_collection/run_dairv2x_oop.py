@@ -3,7 +3,7 @@ import os, json, math, time, traceback
 import numpy as np
 import cv2
 import setup_path
-import cosysairsim as airsim
+import hercules as airsim
 
 from Hercules2D3DDetector import Hercules2D3DDetector as H
 

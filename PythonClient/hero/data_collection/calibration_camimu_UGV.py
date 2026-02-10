@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import setup_path
-import cosysairsim as airsim
+import hercules as airsim
 import time
 import numpy as np
 from multiprocessing import Process

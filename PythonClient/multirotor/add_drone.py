@@ -1,5 +1,5 @@
 import setup_path 
-import cosysairsim as airsim
+import hercules as airsim
 import tempfile
 import os
 import numpy as np

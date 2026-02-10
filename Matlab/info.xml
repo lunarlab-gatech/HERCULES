@@ -11,7 +11,7 @@
     <!-- to parse the file -->
     <matlabrelease>2024a</matlabrelease>
     <!-- (Required) Title of toolbox. Appears in the Contents pane -->
-    <name>Cosys-AirSim Matlab Client</name>
+    <name>HERCULES Matlab Client</name>
     <!-- (Required) Label for the toolbox. pick one: -->
     <!-- matlab, toolbox, simulink, blockset, links_targets  -->
     <type>toolbox</type>

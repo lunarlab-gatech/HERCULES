@@ -16,7 +16,7 @@ MOD: Also samples LiDAR in the SAME pause window and visualizes it in Open3D.
 import math, re
 import numpy as np
 import setup_path
-import cosysairsim as airsim
+import hercules as airsim
 import cv2
 import csv
 from collections import defaultdict
@@ -105,7 +105,7 @@ class Hercules2D3DDetector:
     MIN_LIDAR_POINTS_IN_BOX = 10 # Minimum LiDAR points required inside a 3D box to keep/save the label
     
     # --- mapping csv + filters ---
-    CSV_PATH      = "/home/sgarimella34/multi-robot-coordination/Cosys-AirSim/csv_data/ue_label_vs_name.csv"
+    CSV_PATH      = "/home/sgarimella34/multi-robot-coordination/HERCULES/csv_data/ue_label_vs_name.csv"
     KEYWORDS = (
         "human", "person", "pedestrian",
         "car", "truck", "sedan", "suv", "van", "bus", "vehicle",

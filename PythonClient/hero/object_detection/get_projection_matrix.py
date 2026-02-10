@@ -3,7 +3,7 @@
 Simple script to fetch and display the camera projection matrix from AirSim.
 """
 import setup_path
-import cosysairsim as airsim
+import hercules as airsim
 import numpy as np
 
 def main():

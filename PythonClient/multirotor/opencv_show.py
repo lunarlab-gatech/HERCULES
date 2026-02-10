@@ -1,8 +1,8 @@
 # In settings.json first activate computer vision mode:
-# https://github.com/Cosys-Lab/Cosys-AirSim/blob/main/docs/image_apis.md#computer-vision-mode
+# https://github.com/Cosys-Lab/HERCULES/blob/main/docs/image_apis.md#computer-vision-mode
 
 import setup_path
-import cosysairsim as airsim
+import hercules as airsim
 
 # requires Python 3.5.3 :: Anaconda 4.4.0
 # pip install opencv-python

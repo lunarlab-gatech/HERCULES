@@ -51,7 +51,7 @@
 }
 '''
 import setup_path
-import cosysairsim as airsim
+import hercules as airsim
 import numpy as np
 
 class LidarTest:

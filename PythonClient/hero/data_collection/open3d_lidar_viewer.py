@@ -3,7 +3,7 @@
 open3d_lidar_viewer.py
 
 Load and visualize LiDAR .npy files (Nx3 float arrays in meters) with Open3D.
-Designed for data saved by Cosys-AirSim/HERCULES collectors where LiDAR points
+Designed for data saved by HERCULES/HERCULES collectors where LiDAR points
 are stored under ".../<vehicle>/lidar/<timestamp>.npy".
 
 Usage:

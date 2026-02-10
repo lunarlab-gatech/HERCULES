@@ -176,10 +176,10 @@ class VehicleClient:
 
         if server_ver < server_min_ver:
             print(ver_info, file=sys.stderr)
-            print("Cosys-AirSim server is of older version and not supported by this client. Please upgrade!")
+            print("HERCULES server is of older version and not supported by this client. Please upgrade!")
         elif client_ver < client_min_ver:
             print(ver_info, file=sys.stderr)
-            print("Cosys-AirSim client is of older version and not supported by this server. Please upgrade!")
+            print("HERCULES client is of older version and not supported by this server. Please upgrade!")
         else:
             print(ver_info)
         print('')
@@ -577,7 +577,7 @@ class VehicleClient:
         Affords access to the countless built-in commands such as "stat unit", "stat fps", "open [map]", adjust any
         config settings, etc. etc.
         Allows the user to create bespoke APIs very easily, by adding a custom event to the level blueprint, and then
-         calling the console command "ce MyEventName [args]". No recompilation of Cosys-AirSim needed!
+         calling the console command "ce MyEventName [args]". No recompilation of HERCULES needed!
 
         Args:
             command (str): Desired Unreal Engine Console command to run.
@@ -1600,7 +1600,7 @@ class VehicleClient:
 
     def getSettingsString(self):
         """
-        Fetch the settings text being used by Cosys-AirSim
+        Fetch the settings text being used by HERCULES
 
         Returns:
             str: Settings text in JSON format
@@ -2233,10 +2233,10 @@ class MultirotorClient(VehicleClient, object):
         - Sets angle level controller gains (used by any API setting angle references -
         for ex: moveByRollPitchYawZAsync(), moveByRollPitchYawThrottleAsync(), etc.)
         - Modifying these gains will also affect the behaviour of moveByVelocityAsync() API.
-            This is because the Cosys-AirSim flight controller will track velocity setpoints
+            This is because the HERCULES flight controller will track velocity setpoints
              by converting them to angle set points.
         - This function should only be called if the default angle level control PID gains need to be modified.
-        - Passing AngleLevelControllerGains() sets gains to default Cosys-AirSim values.
+        - Passing AngleLevelControllerGains() sets gains to default HERCULES values.
 
         Args:
             angle_level_gains (AngleLevelControllerGains):
@@ -2251,7 +2251,7 @@ class MultirotorClient(VehicleClient, object):
         """
         - Sets velocity controller gains for moveByVelocityAsync().
         - This function should only be called if the default velocity control PID gains need to be modified.
-        - Passing VelocityControllerGains() sets gains to default Cosys-AirSim values.
+        - Passing VelocityControllerGains() sets gains to default HERCULES values.
 
         Args:
             velocity_gains (VelocityControllerGains):

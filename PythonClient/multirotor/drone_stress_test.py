@@ -1,5 +1,5 @@
 import setup_path 
-import cosysairsim as airsim
+import hercules as airsim
 
 # this script moves the drone to a location, then rests it thousands of time
 # purpose of this script is to stress test reset API

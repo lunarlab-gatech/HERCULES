@@ -53,7 +53,7 @@ Maps to sensor_msgs/msg/PointCloud2.
 RECORDING SCRIPT
 
 Use hercules_data_collector.py:
-  cd ~/multi-robot-coordination/Cosys-AirSim/PythonClient/hero
+  cd ~/multi-robot-coordination/HERCULES/PythonClient/hero
   chmod +x hercules_data_collector.py
   python3 hercules_data_collector.py \
     --duration 30 \

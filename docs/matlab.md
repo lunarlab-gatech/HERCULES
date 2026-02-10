@@ -1,11 +1,11 @@
 # How to use AirSim with Matlab
 
 AirSim and Matlab can be integrated using Python. an example Matlab client is provided demonstrating how to interact with AirSim from Matlab.
-This can be used from source or installed as a toolbox (install from [File Exchange](https://nl.mathworks.com/matlabcentral/fileexchange/168061-cosys-airsim-matlab-api-client), or from source by double-clicking or dragging into Matlab the file _Cosys-AirSim Matlab API Client.mltbx_)
+This can be used from source or installed as a toolbox (install from [File Exchange](https://nl.mathworks.com/matlabcentral/fileexchange/168061-hercules-matlab-api-client), or from source by double-clicking or dragging into Matlab the file _HERCULES Matlab API Client.mltbx_)
 
 ## Prerequisites
 
-These instructions are for Matlab 2024a (with toolboxes for the client: Computer Vision, Aerospace, Signal Processing Toolbox) UE 5.X and latest Cosys-AirSim release.
+These instructions are for Matlab 2024a (with toolboxes for the client: Computer Vision, Aerospace, Signal Processing Toolbox) UE 5.X and latest HERCULES release.
 It also requires the AirSim python package to be installed. 
 For this go into the _PythonClient_ folder and use pip to install it to your python environment that is also used in Matlab with `pip install .`
 You can find out in Matlab what Python version is used with 
@@ -18,12 +18,12 @@ You should have these components installed and working before proceeding.
 
 ## Usage
 
-This a client implementation of the RPC API for Matlab for the Cosys\-AirSim simulation framework. A main class AirSimClient is available which implements all API calls.
+This a client implementation of the RPC API for Matlab for the HERCULES simulation framework. A main class AirSimClient is available which implements all API calls.
 Do note that at this point not all functions have been tested and most function documentation was auto\-generated. This is still a WIP client.
 
 ### **Initial setup**
 
-When starting with this wrapper, first try to make a connection to the Cosys\-AirSim simulation. 
+When starting with this wrapper, first try to make a connection to the HERCULES simulation. 
 
 ```matlab
 vehicle_name = "airsimvehicle";

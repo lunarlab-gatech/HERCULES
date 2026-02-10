@@ -1,9 +1,9 @@
-# Python API for AirSim
+# Python API for HERCULES
 
-This package contains simple Python client for [Cosys-AirSim](https://github.com/Cosys-Lab/Cosys-AirSim). 
+This package contains simple Python client for HERCULES (based on AirSim / HERCULES).
 It can also be installed as a Python module. This integrates most API functions over RPC.
 
-Note that this is renamed `cosysairsim` from the original `airsim` module. 
+Note that this is renamed `hercules` from the original `cosysairsim` / `airsim` module.
 
 ## Dependencies
 This package depends on `numpy` and `msgpack` and would automatically install `numpy` and `rpc-msgpack` (this may need administrator/sudo prompt):
@@ -14,13 +14,13 @@ pip install rpc-msgpack
 
 ## Installing from pip
 
-You can install the Cosys-AirSim Python client from pip with `pip install cosysairsim`
+You can install the HERCULES Python client with `pip install hercules`
 
 ## Installing Python Module from source
-For this go into the _PythonClient_ folder of the Cosys-AirSim repository and use pip to install it to your python environment with `pip install .`
+For this go into the _PythonClient_ folder of the HERCULES repository and use pip to install it to your python environment with `pip install .`
 
 ## More Info
 
-More information on AirSim can be found at:
+More information on HERCULES can be found at:
 https://cosys-lab.github.io/
 

@@ -3,7 +3,7 @@
 ## Setting Up the Unreal Project
 
 ### Option 1: Built-in Blocks Environment
-To get up and running fast, you can use the Blocks project that already comes with Cosys-AirSim. This is not very highly detailed environment to keep the repo size reasonable but we use it for various testing all the times and it is the easiest way to get your feet wet in this strange land. 
+To get up and running fast, you can use the Blocks project that already comes with HERCULES. This is not very highly detailed environment to keep the repo size reasonable but we use it for various testing all the times and it is the easiest way to get your feet wet in this strange land. 
 
 Follow these [quick steps](unreal_blocks.md).
 

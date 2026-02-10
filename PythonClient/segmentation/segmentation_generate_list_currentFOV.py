@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
 import setup_path
-import cosysairsim as airsim
+import hercules as airsim
 import csv
 import numpy as np
 from datetime import datetime
 
 def main():
-    # 1) Connect to Cosys-AirSim
+    # 1) Connect to HERCULES
     client = airsim.MultirotorClient()
     client.confirmConnection()
 

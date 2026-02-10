@@ -288,7 +288,7 @@ def main(raw_data_dir, bag_out, include, exclude, rgb_folder, imu_file, odom_fil
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser(
-        description="Pack raw Cosys-AirSim data into a ROS2 bag"
+        description="Pack raw HERCULES data into a ROS2 bag"
     )
     p.add_argument("raw_data_dir",
                    help="Folder containing per-vehicle imu.txt, odom.txt, and sensor subfolders")

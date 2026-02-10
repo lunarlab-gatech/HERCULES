@@ -6,8 +6,8 @@ Below we will use a freely downloadable environment from Unreal Marketplace call
 ## Note for Linux Users
 There is no `Epic Games Launcher` for Linux which means that if you need to create custom environment, you will need Windows machine to do that. Once you have Unreal project folder, just copy it over to your Linux machine.
 
-## Step-by-Step Instructions when using Cosys-AirSim from Precompiled Binaries
-1. It is assumed you downloaded the right precompiled Cosys-AirSim plugin from the [GitHub releases page](https://github.com/Cosys-Lab/Cosys-AirSim/releases) for the right Unreal version.
+## Step-by-Step Instructions when using HERCULES from Precompiled Binaries
+1. It is assumed you downloaded the right precompiled HERCULES plugin from the [GitHub releases page](https://github.com/Cosys-Lab/HERCULES/releases) for the right Unreal version.
 2. In `Epic Games Launcher` click the Samples tab then scroll down and find `Landscape Mountains`. Click the `Create Project` and download this content (~2GB download). 
 
     ![current version](images/landscape_mountains.png)
@@ -65,7 +65,7 @@ There is no `Epic Games Launcher` for Linux which means that if you need to crea
 
 11. Be sure to `Save` these edits. Hit the Play button in the Unreal Editor. See the other documentation pages for how to use it.
 
-## Step-by-Step Instructions when using Cosys-AirSim from Source Build
+## Step-by-Step Instructions when using HERCULES from Source Build
 
 1. Make sure AirSim is built and Unreal 5.X is installed as described in [the installation instructions](install_windows.md).
 2. In `Epic Games Launcher` click the Samples tab then scroll down and find `Landscape Mountains`. Click the `Create Project` and download this content (~2GB download). 
@@ -166,7 +166,7 @@ Congratulations! You are now running AirSim in your own Unreal environment.
 #### Updating Your Environment to Latest Version of AirSim
 Once you have your environment using above instructions, you should frequently update your local AirSim code to latest version from GitHub. Below are the instructions to do this:
 
-1. First put [clean.bat](https://github.com/Cosys-Lab/Cosys-AirSim/blob/main/Unreal/Environments/Blocks/clean.bat) (or [clean.sh](https://github.com/Cosys-Lab/Cosys-AirSim/blob/main/Unreal/Environments/Blocks/clean.sh) for Linux users) in the root folder of your environment. Run this file to clean up all intermediate files in your Unreal project.
+1. First put [clean.bat](https://github.com/Cosys-Lab/HERCULES/blob/main/Unreal/Environments/Blocks/clean.bat) (or [clean.sh](https://github.com/Cosys-Lab/HERCULES/blob/main/Unreal/Environments/Blocks/clean.sh) for Linux users) in the root folder of your environment. Run this file to clean up all intermediate files in your Unreal project.
 2. Do `git pull` in your AirSim repo followed by `build.cmd` (or `./build.sh` for Linux users).
 3. Replace [your project]/Plugins folder with AirSim/Unreal/Plugins folder.
 4. Right-click on your .uproject file and chose "Generate Visual Studio project files" option. This is not required for Linux.
