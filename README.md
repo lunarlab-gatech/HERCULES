@@ -74,7 +74,7 @@ HERCULES is developed and maintained by the [Lunar Lab](https://lab-idar.gatech.
 HERCULES ships with ready-to-run evaluation suites for three core research workflows:
 
 ### Collaborative SLAM
-Benchmarks for [ROMAN](https://github.com/mit-acl/roman) (object-based multi-robot map alignment with Kimera-RPGO backend) and odometry baselines including OpenVINS, ORB-SLAM3, and LIO-SAM across city, desert, and forest sequences with heterogeneous UAV–UGV teams.
+Benchmarks for [ROMAN](https://github.com/mit-acl/roman) (object-based multi-robot map alignment with Kimera-RPGO backend) and odometry baselines including OpenVINS, ORB-SLAM3, and LIO-SAM across city, desert, and forest sequences with heterogeneous UAV–UGV teams. See [paper/CollaborativeSLAM.md](paper/CollaborativeSLAM.md) for details.
 
 ### Collaborative Perception (3D Object Detection)
 A vehicle–infrastructure cooperative (VIC) setting compatible with [DAIR-V2X](https://github.com/AIR-THU/DAIR-V2X). Includes 6,000 synchronized UGV–UAV frame pairs (RGB, LiDAR, calibration, ground truth) in DAIR-V2X VIC-Sync format. Demonstrates sim-to-real pretraining with PointPillars late-fusion models.
