@@ -41,7 +41,6 @@ The [robotdataprocess](https://github.com/lunarlab-gatech/robotdataprocess/tree/
 - **OpenVINS**: `python examples/Hercules/results/results_OpenVINS.py`
 - **LIO-SAM**: `python examples/Hercules/results/results_LIO-SAM.py`
 
-
 ---
 ## Baselines
 
@@ -57,10 +56,12 @@ For each baseline:
 
 ### ROMAN
 
-The code for running this experiment can be found here: TODO
+The code for running this experiment can be found here: [ROMAN - Tag "HERCULES"](https://github.com/lunarlab-gatech/roman-baseline/tree/HERCULES) 
 
 ```
-
+git clone git@github.com:lunarlab-gatech/roman-baseline.git
+cd roman-baseline
+git checkout HERCULES
 ```
 
 ### OpenVINS
