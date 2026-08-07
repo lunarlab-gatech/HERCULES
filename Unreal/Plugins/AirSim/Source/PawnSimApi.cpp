@@ -539,6 +539,15 @@ void PawnSimApi::updateKinematics(float dt)
 {
 	//update kinematics from pawn's movement instead of physics engine
 
+    // CRASH GUARD: under heavy multi-vehicle lockstep runs the pawn can be transiently
+    // invalid (mid-GC/teardown/physics glitch); dereferencing it here crashed the editor
+    // (GetVelocity on a dangling pawn -> game thread dies -> simContinueForTime hangs ->
+    // the whole external pipeline stalls out). Skip this tick's update instead: the
+    // previous kinematic state persists for one tick, which is harmless.
+    APawn* pawn_check = getPawn();
+    if (!IsValid(pawn_check) || !IsValid(pawn_check->GetRootComponent()))
+        return;
+
 	auto next_kinematics = kinematics_->getState();
 
     next_kinematics.pose = getPose();

@@ -518,6 +518,7 @@ private:
                 const double tick_ms = std::chrono::duration<double, std::milli>(
                     std::chrono::steady_clock::now() - tick_t0).count();
                 record_tick_diag(step, tick_retries, tick_ms);
+                consecutive_timeouts_ = 0;
             } catch (const AcquisitionTimeout &e) {
                 RCLCPP_FATAL(get_logger(),
                              "hercules_synced_node: %s Shutting down.", e.what());
@@ -526,6 +527,33 @@ private:
             } catch (rpc::rpc_error &e) {
                 RCLCPP_ERROR_THROTTLE(get_logger(), *get_clock(), 2000, "RPC error: %s",
                                       e.get_error().as<std::string>().c_str());
+            } catch (rpc::timeout &e) {
+                // The editor can hitch or crash mid-tick (seen live: a PawnSimApi pawn-deref
+                // crash hung simContinueForTime past the 60s RPC timeout). rpc::timeout is NOT
+                // an rpc_error, so it used to escape this loop, leave the thread, and SIGABRT
+                // the whole bridge. Ride it out: reconnect and retry the tick; give up only
+                // after enough consecutive dead ticks that the sim is clearly gone.
+                ++consecutive_timeouts_;
+                RCLCPP_ERROR(get_logger(),
+                             "lockstep tick RPC timeout (%d consecutive): %s -- reconnecting",
+                             consecutive_timeouts_, e.what());
+                if (consecutive_timeouts_ >= 5) {
+                    RCLCPP_FATAL(get_logger(),
+                                 "%d consecutive tick timeouts -- sim unreachable. Shutting down.",
+                                 consecutive_timeouts_);
+                    rclcpp::shutdown();
+                    return;
+                }
+                try {
+                    client_ = std::make_unique<msr::airlib::CarRpcLibClient>(host_ip_, host_port_);
+                    client_->confirmConnection();
+                    for (auto &vp : vehicles_) {
+                        try { client_->enableApiControl(true, vp->name); } catch (...) {}
+                    }
+                    RCLCPP_WARN(get_logger(), "reconnected after tick timeout");
+                } catch (...) {
+                    RCLCPP_ERROR(get_logger(), "reconnect failed; retrying next tick");
+                }
             }
         }
     }
@@ -889,6 +917,7 @@ private:
     tf2::Quaternion shared_init_q_{0, 0, 0, 1};
 
     std::unique_ptr<msr::airlib::CarRpcLibClient> client_;
+    int consecutive_timeouts_ = 0;
     std::vector<std::unique_ptr<Vehicle>> vehicles_;
     rclcpp::Publisher<rosgraph_msgs::msg::Clock>::SharedPtr clock_pub_;
     std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
