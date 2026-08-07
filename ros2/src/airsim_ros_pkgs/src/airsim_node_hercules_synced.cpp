@@ -98,6 +98,10 @@ struct Vehicle
     std::string name;
     std::string odom_frame_id, lidar_frame_id, camera_body_frame_id, camera_optical_frame_id;
 
+    // FALL-THROUGH RESCUE state: last pose observed while clearly grounded (see lockstep_loop)
+    msr::airlib::Pose last_good_pose;
+    bool has_good_pose = false;
+
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr lidar_pub;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr depth_pub;
@@ -159,6 +163,13 @@ public:
         vel_kp_ = declare_parameter<double>("vel_kp", 1.5);
         vel_ki_ = declare_parameter<double>("vel_ki", 0.5);
         brake_kp_ = declare_parameter<double>("brake_kp", 3.0);      // over-speed brake proportionality
+        // FALL-THROUGH RESCUE: a hard prop collision can punch a vehicle through the terrain's
+        // one-sided collision mesh (unbounded depenetration impulse); it then free-falls under
+        // the world (and the dangling pawn used to crash the editor). NED z grows DOWNWARD:
+        // z above fall_rescue_z means the vehicle is far below any drivable ground -> teleport
+        // it back to its last grounded pose and stop it for a tick.
+        fall_rescue_ = declare_parameter<bool>("fall_rescue", true);
+        fall_rescue_z_ = declare_parameter<double>("fall_rescue_z", 10.0);
         drive_max_throttle_ = declare_parameter<double>("drive_max_throttle", 0.6);
         min_creep_throttle_ = declare_parameter<double>("min_creep_throttle", 0.08);  // beat static friction
         // ported moveOnPath follower gains (CarRpcLibClient::moveOnPath: Kp_steering=1, max_steer=0.5)
@@ -502,7 +513,27 @@ private:
                     std::vector<ImageResponse> images = acquire_images_blocking(v, img_retries);
                     int lidar_retries = 0;
                     msr::airlib::LidarData lidar = acquire_lidar_blocking(v, lidar_retries);
-                    const auto car_state = client_->getCarState(v.name);
+                    auto car_state = client_->getCarState(v.name);
+                    const float z_ned = car_state.kinematics_estimated.pose.position.z();
+                    if (fall_rescue_ && v.has_good_pose && z_ned > fall_rescue_z_) {
+                        RCLCPP_ERROR(get_logger(),
+                                     "[%s] BELOW WORLD (z_ned=%.1f > %.1f) -> rescue teleport to "
+                                     "last grounded pose", v.name.c_str(), z_ned, fall_rescue_z_);
+                        try {
+                            msr::airlib::Pose up = v.last_good_pose;
+                            up.position.z() -= 0.3f;   // slight lift to avoid re-penetration
+                            client_->simSetVehiclePose(up, true, v.name);
+                            msr::airlib::CarApiBase::CarControls stop;
+                            stop.brake = 1.0;
+                            client_->setCarControls(stop, v.name);
+                            car_state = client_->getCarState(v.name);
+                        } catch (...) {
+                            RCLCPP_ERROR(get_logger(), "[%s] rescue teleport failed", v.name.c_str());
+                        }
+                    } else if (z_ned < fall_rescue_z_ * 0.5) {
+                        v.last_good_pose = car_state.kinematics_estimated.pose;
+                        v.has_good_pose = true;
+                    }
                     tick_retries += img_retries + lidar_retries;
 
                     publish_odom_and_tf(v, car_state, stamp);
@@ -918,6 +949,8 @@ private:
 
     std::unique_ptr<msr::airlib::CarRpcLibClient> client_;
     int consecutive_timeouts_ = 0;
+    bool fall_rescue_ = true;
+    double fall_rescue_z_ = 10.0;
     std::vector<std::unique_ptr<Vehicle>> vehicles_;
     rclcpp::Publisher<rosgraph_msgs::msg::Clock>::SharedPtr clock_pub_;
     std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
