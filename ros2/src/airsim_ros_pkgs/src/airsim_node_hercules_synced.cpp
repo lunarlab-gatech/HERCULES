@@ -102,6 +102,10 @@ struct Vehicle
     msr::airlib::Pose last_good_pose;
     bool has_good_pose = false;
 
+    // STUCK-NUDGE state: rolling displacement anchor (see lockstep_loop)
+    float stuck_ax = 0.f, stuck_ay = 0.f;
+    double stuck_at = -1.0;
+
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr lidar_pub;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr depth_pub;
@@ -170,6 +174,14 @@ public:
         // it back to its last grounded pose and stop it for a tick.
         fall_rescue_ = declare_parameter<bool>("fall_rescue", true);
         fall_rescue_z_ = declare_parameter<double>("fall_rescue_z", 10.0);
+        // STUCK-NUDGE (last resort under the executor's stall-reverse): a vehicle with an
+        // ACTIVE follow path that moves < stuck_min_motion over stuck_window_s of sim time is
+        // physically wedged on something the map calls drivable (seen live: a physics-solid
+        // grass tree pinned a Husky for hours). Teleport it nudge_back_m straight backward.
+        stuck_nudge_ = declare_parameter<bool>("stuck_nudge", true);
+        stuck_window_s_ = declare_parameter<double>("stuck_window_s", 60.0);
+        stuck_min_motion_ = declare_parameter<double>("stuck_min_motion", 0.3);
+        nudge_back_m_ = declare_parameter<double>("nudge_back_m", 1.5);
         drive_max_throttle_ = declare_parameter<double>("drive_max_throttle", 0.6);
         min_creep_throttle_ = declare_parameter<double>("min_creep_throttle", 0.08);  // beat static friction
         // ported moveOnPath follower gains (CarRpcLibClient::moveOnPath: Kp_steering=1, max_steer=0.5)
@@ -533,6 +545,38 @@ private:
                     } else if (z_ned < fall_rescue_z_ * 0.5) {
                         v.last_good_pose = car_state.kinematics_estimated.pose;
                         v.has_good_pose = true;
+                    }
+                    // stuck-nudge: displacement over a sliding sim-time window while a follow
+                    // path is active; wedged -> teleport straight backward along the heading
+                    if (stuck_nudge_) {
+                        const double sim_now = static_cast<double>(step) * sync_dt_;
+                        const auto &pp = car_state.kinematics_estimated.pose.position;
+                        if (v.stuck_at < 0.0 || v.follow_path.empty()) {
+                            v.stuck_ax = pp.x(); v.stuck_ay = pp.y(); v.stuck_at = sim_now;
+                        } else if (sim_now - v.stuck_at >= stuck_window_s_) {
+                            const double moved = std::hypot(pp.x() - v.stuck_ax,
+                                                            pp.y() - v.stuck_ay);
+                            if (moved < stuck_min_motion_) {
+                                auto pose = car_state.kinematics_estimated.pose;
+                                const auto q = pose.orientation;
+                                const double yaw = std::atan2(
+                                    2.0 * (q.w() * q.z() + q.x() * q.y()),
+                                    1.0 - 2.0 * (q.y() * q.y() + q.z() * q.z()));
+                                pose.position.x() -= static_cast<float>(nudge_back_m_ * std::cos(yaw));
+                                pose.position.y() -= static_cast<float>(nudge_back_m_ * std::sin(yaw));
+                                pose.position.z() -= 0.15f;
+                                RCLCPP_WARN(get_logger(),
+                                            "[%s] STUCK (%.2fm in %.0fs with active path) -> "
+                                            "nudge %.1fm backward", v.name.c_str(), moved,
+                                            stuck_window_s_, nudge_back_m_);
+                                try {
+                                    client_->simSetVehiclePose(pose, true, v.name);
+                                } catch (...) {
+                                    RCLCPP_ERROR(get_logger(), "[%s] nudge failed", v.name.c_str());
+                                }
+                            }
+                            v.stuck_ax = pp.x(); v.stuck_ay = pp.y(); v.stuck_at = sim_now;
+                        }
                     }
                     tick_retries += img_retries + lidar_retries;
 
@@ -951,6 +995,8 @@ private:
     int consecutive_timeouts_ = 0;
     bool fall_rescue_ = true;
     double fall_rescue_z_ = 10.0;
+    bool stuck_nudge_ = true;
+    double stuck_window_s_ = 60.0, stuck_min_motion_ = 0.3, nudge_back_m_ = 1.5;
     std::vector<std::unique_ptr<Vehicle>> vehicles_;
     rclcpp::Publisher<rosgraph_msgs::msg::Clock>::SharedPtr clock_pub_;
     std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
