@@ -544,9 +544,10 @@ void PawnSimApi::updateKinematics(float dt)
     // (GetVelocity on a dangling pawn -> game thread dies -> simContinueForTime hangs ->
     // the whole external pipeline stalls out). Skip this tick's update instead: the
     // previous kinematic state persists for one tick, which is harmless.
-    APawn* pawn_check = getPawn();
-    if (!IsValid(pawn_check) || !IsValid(pawn_check->GetRootComponent()))
-        return;
+	APawn* pawn_check = getPawn();
+	if (!IsValid(pawn_check) || !IsValid(pawn_check->GetRootComponent())) {
+		return;
+	}
 
 	auto next_kinematics = kinematics_->getState();
 
