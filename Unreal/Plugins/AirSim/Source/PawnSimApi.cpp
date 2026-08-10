@@ -549,6 +549,41 @@ void PawnSimApi::updateKinematics(float dt)
 		return;
 	}
 
+	// FALL GUARD: a terrain punch-through sends the vehicle into free fall below the
+	// world. RPC-level rescue teleports cannot arrest a falling Chaos vehicle (the
+	// solver re-applies its own state) and at KillZ the pawn is destroyed, hanging
+	// image capture and the whole lockstep pipeline. Acting here on the game thread
+	// during the simulation window lets us teleport AND zero the physics velocity
+	// directly, which does stick.
+	{
+		UPrimitiveComponent* root_prim = Cast<UPrimitiveComponent>(pawn_check->GetRootComponent());
+		const FVector cur_loc = pawn_check->GetActorLocation();
+		const float z_ned_m = ned_transform_.toLocalNed(cur_loc).z();
+		if (z_ned_m > 10.0f) {
+			if (state_.fall_guard_has_pose) {
+				pawn_check->SetActorLocationAndRotation(state_.fall_guard_location,
+				                                        state_.fall_guard_rotation,
+				                                        false, nullptr, ETeleportType::TeleportPhysics);
+				if (root_prim && root_prim->IsSimulatingPhysics()) {
+					root_prim->SetPhysicsLinearVelocity(FVector::ZeroVector);
+					root_prim->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+				}
+				UE_LOG(LogTemp, Warning, TEXT("AirSim fall-guard: %s below world (z_ned=%.1fm) -> teleported to last grounded pose"),
+				       *pawn_check->GetName(), z_ned_m);
+			}
+		}
+		else if (z_ned_m < 5.0f) {
+			const FVector vel_chk = (root_prim && root_prim->IsSimulatingPhysics())
+				? root_prim->GetPhysicsLinearVelocity()
+				: pawn_check->GetVelocity();
+			if (FMath::Abs(vel_chk.Z) < 100.0f) {   // cm/s: only capture when not falling
+				state_.fall_guard_location = cur_loc + FVector(0, 0, 30);   // 30 cm lift
+				state_.fall_guard_rotation = pawn_check->GetActorQuat();
+				state_.fall_guard_has_pose = true;
+			}
+		}
+	}
+
 	auto next_kinematics = kinematics_->getState();
 
     next_kinematics.pose = getPose();

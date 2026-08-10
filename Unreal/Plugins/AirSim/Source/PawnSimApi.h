@@ -190,6 +190,11 @@ private: //vars
         FVector mesh_bounds;
         FVector ground_offset;
         FVector transformation_offset;
+
+        // fall guard: last known grounded pose, captured while driving on terrain
+        bool fall_guard_has_pose = false;
+        FVector fall_guard_location = FVector::ZeroVector;
+        FQuat fall_guard_rotation = FQuat::Identity;
     };
 
     State state_, initial_state_;
