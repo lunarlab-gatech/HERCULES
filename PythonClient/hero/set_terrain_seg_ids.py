@@ -45,16 +45,11 @@ GROUND_Z_NED = (0.5, 2.5)       # discs sit at ground level: z_ned ~ +1.5 below 
 
 
 def connect():
-    """Hero SimMode: drone RPC 41451, car RPC 41452; with no drone the 41451 server is absent."""
-    try:
-        c = airsim.VehicleClient(timeout_value=10)
-        c.confirmConnection()
-        return c
-    except Exception:
-        print("41451 not responding, falling back to car port 41452")
-        c = airsim.VehicleClient(port=41452, timeout_value=60)
-        c.confirmConnection()
-        return c
+    """Hero SimMode: car RPC 41452 (the drone port 41451 is absent in car-only fleets --
+    probing it first wasted 10s per run and risked the harness timeout)."""
+    c = airsim.VehicleClient(port=41452, timeout_value=60)
+    c.confirmConnection()
+    return c
 
 
 def main():
