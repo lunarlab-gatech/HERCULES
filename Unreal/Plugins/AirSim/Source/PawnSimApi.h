@@ -195,6 +195,7 @@ private: //vars
         bool fall_guard_has_pose = false;
         FVector fall_guard_location = FVector::ZeroVector;
         FQuat fall_guard_rotation = FQuat::Identity;
+        int fall_guard_fires = 0;
     };
 
     State state_, initial_state_;
