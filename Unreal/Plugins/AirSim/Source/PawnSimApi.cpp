@@ -569,7 +569,10 @@ void PawnSimApi::updateKinematics(float dt)
 		const float z_ned_m = ned_transform_.toLocalNed(cur_loc).z();
 		if (z_ned_m > 10.0f) {
 			state_.fall_guard_fires++;
-			if (state_.fall_guard_fires > 100 || !state_.fall_guard_has_pose) {
+			// 30 m under is never locally recoverable -- bogus captures must not be able
+			// to keep resetting the counter and defer escalation forever (observed live:
+			// 15k fires with the counter pinned below the threshold)
+			if (z_ned_m > 30.0f || state_.fall_guard_fires > 100 || !state_.fall_guard_has_pose) {
 				// escalation: repeated rescues did not recover -- go back to spawn
 				pawn_check->SetActorLocationAndRotation(
 					state_.start_location + FVector(0, 0, 150),
@@ -601,11 +604,17 @@ void PawnSimApi::updateKinematics(float dt)
 				? root_prim->GetPhysicsLinearVelocity()
 				: pawn_check->GetVelocity();
 			if (FMath::Abs(vel_chk.Z) < 100.0f) {   // cm/s: not falling...
+				// ...and verifiably ON TOP of the world: a plain "surface below" trace is
+				// fooled by geometry layered beneath the landscape (observed live -- a
+				// subterranean robot kept 'capturing' and the rescue looped forever).
+				// Trace down from 50 m ABOVE the robot's x,y: the first hit is the true
+				// top surface; only capture if the robot is within 1.5 m of it.
 				FHitResult hit;
 				FCollisionQueryParams qp(SCENE_QUERY_STAT(AirSimFallGuard), false, pawn_check);
-				const bool grounded = pawn_check->GetWorld()->LineTraceSingleByChannel(
-					hit, cur_loc, cur_loc - FVector(0, 0, 120), ECC_WorldStatic, qp);
-				if (grounded) {                     // ...and verifiably above a surface
+				const FVector sky(cur_loc.X, cur_loc.Y, cur_loc.Z + 5000.0f);
+				const bool hit_top = pawn_check->GetWorld()->LineTraceSingleByChannel(
+					hit, sky, cur_loc - FVector(0, 0, 150), ECC_WorldStatic, qp);
+				if (hit_top && FMath::Abs(hit.ImpactPoint.Z - cur_loc.Z) < 150.0f) {
 					state_.fall_guard_location = cur_loc;
 					state_.fall_guard_rotation = pawn_check->GetActorQuat();
 					state_.fall_guard_has_pose = true;
