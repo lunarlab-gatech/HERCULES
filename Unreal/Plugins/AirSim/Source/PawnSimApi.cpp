@@ -566,6 +566,23 @@ void PawnSimApi::updateKinematics(float dt)
 	{
 		UPrimitiveComponent* root_prim = Cast<UPrimitiveComponent>(pawn_check->GetRootComponent());
 		const FVector cur_loc = pawn_check->GetActorLocation();
+		// NaN GUARD: a wedge-induced Chaos blowup can NaN-poison the pawn transform
+		// WITHOUT a fall (observed live: pose bit-frozen, cameras dead, controls no-op,
+		// zero fall-guard fires because NaN comparisons are all false). Teleporting to a
+		// clean transform with zeroed velocity is also how a NaN'd Chaos body recovers.
+		if (cur_loc.ContainsNaN()) {
+			pawn_check->SetActorLocationAndRotation(
+				state_.start_location + FVector(0, 0, 150),
+				state_.start_rotation.Quaternion(),
+				false, nullptr, ETeleportType::TeleportPhysics);
+			if (root_prim && root_prim->IsSimulatingPhysics()) {
+				root_prim->SetPhysicsLinearVelocity(FVector::ZeroVector);
+				root_prim->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+			}
+			UE_LOG(LogTemp, Error, TEXT("AirSim fall-guard NAN RECOVERY: %s transform was NaN -> spawn pose"),
+			       *pawn_check->GetName());
+			return;
+		}
 		const float z_ned_m = ned_transform_.toLocalNed(cur_loc).z();
 		if (z_ned_m > 10.0f) {
 			state_.fall_guard_fires++;
