@@ -53,6 +53,7 @@ STRICT_MODE_ON
 
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <geometry_msgs/msg/twist.hpp>
+#include <std_msgs/msg/float64.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <mutex>
@@ -116,6 +117,8 @@ struct Vehicle
     rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr follow_path_sub;
 
     std::atomic<double> cmd_target_speed{0.0};   // desired speed setpoint (m/s, signed) from /cmd_vel
+    std::atomic<double> terrain_max_speed{1e9};  // per-class cap from /<vehicle>/max_speed
+    rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr max_speed_sub;
     std::atomic<double> cmd_steering{0.0};
     std::atomic<double> last_speed{0.0};          // car's current speed (m/s), cached each tick
     double vel_int = 0.0;                          // velocity-PID integrator (lockstep thread only)
@@ -247,6 +250,13 @@ public:
                         v->cmd_target_speed.store(m->linear.x);
                         v->cmd_steering.store(std::max(-1.0, std::min(1.0, s)));
                     });
+                // terrain governor: per-class achievable-speed cap (physical referent of
+                // the semantic cost vector); the follower clamps its cruise setpoint to it
+                v->max_speed_sub = create_subscription<std_msgs::msg::Float64>(
+                    "/" + v->name + "/max_speed", 10,
+                    [v](std_msgs::msg::Float64::SharedPtr m) {
+                        v->terrain_max_speed.store(std::max(0.05, m->data));
+                    });
                 // Committed path to FOLLOW via the ported moveOnPath law (in native NED, run per
                 // lockstep tick). Poses arrive in the shared `map` frame -> convert to global NED.
                 // A non-empty path takes priority over /cmd_vel (which then only does reverse/stop).
@@ -371,7 +381,9 @@ public:
             const double desired_heading = std::atan2(ty - v.last_ned_y, tx - v.last_ned_x);
             ctrl.steering = std::clamp(follow_kp_steer_ * normalizeAngle(desired_heading - v.last_yaw_ned),
                                        -follow_max_steer_, follow_max_steer_);
-            const double err = follow_desired_velocity_ - speed;
+            const double v_des = std::min(follow_desired_velocity_,
+                                          v.terrain_max_speed.load());
+            const double err = v_des - speed;
             if (err > 0.0) {
                 v.vel_int = std::max(-1.0, std::min(1.0, v.vel_int + err * sync_dt_));
                 double thr = vel_kp_ * err + vel_ki_ * v.vel_int;
