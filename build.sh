@@ -97,9 +97,12 @@ if [[ ! -d $build_dir ]]; then
 fi
 
 # Fix for Unreal/Unity using x86_64 (Rosetta) on Apple Silicon hardware.
-CMAKE_VARS=
+# Also: modern CMake (>=4.0) dropped support for the very old
+# cmake_minimum_required() versions declared by some subprojects
+# (e.g. MavLinkTest), so pin a policy floor to let them configure anyway.
+CMAKE_VARS="-DCMAKE_POLICY_VERSION_MINIMUM=3.5"
 if [ "$(uname)" == "Darwin" ]; then
-    CMAKE_VARS="-DCMAKE_APPLE_SILICON_PROCESSOR=x86_64"
+    CMAKE_VARS="$CMAKE_VARS -DCMAKE_APPLE_SILICON_PROCESSOR=x86_64"
 fi
 
 pushd $build_dir  >/dev/null

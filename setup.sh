@@ -51,7 +51,6 @@ else # linux
     fi
     sudo apt-get install -y \
         clang-$clang_version \
-        clang++-$clang_version \
         libc++-$clang_version-dev \
         libc++abi-$clang_version-dev \
         libstdc++-$cpp_version-dev
@@ -166,10 +165,11 @@ if $downloadHighPolySuv; then
             mkdir -p "suv_download_tmp"
             cd suv_download_tmp
             wget  https://github.com/Cosys-Lab/Cosys-AirSim/releases/download/carassets/cosys_car_assets.zip
-            if [ -d "../Unreal/Plugins/AirSim/Content/VehicleAdv/SUV" ]; then
-                rm -rf "../Unreal/Plugins/AirSim/Content/VehicleAdv/SUV"
-            fi
-            unzip -q cosys_car_assets.zip -d ../Unreal/Plugins/AirSim/Content/VehicleAdv
+            # Overwrite in place instead of deleting SUV/ first: this repo has
+            # extra HERCULES-specific assets (e.g. UGV/Husky .uasset files) living
+            # alongside the stock SUV assets in this same folder, and a plain
+            # rm -rf here would silently wipe them out on every fresh setup.sh run.
+            unzip -q -o cosys_car_assets.zip -d ../Unreal/Plugins/AirSim/Content/VehicleAdv
             cd ..
             rm -rf "suv_download_tmp"
     fi

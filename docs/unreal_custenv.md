@@ -135,7 +135,7 @@ There is no `Epic Games Launcher` for Linux which means that if you need to crea
     
     Doing this forces Unreal to include all necessary AirSim content in packaged builds of your project.
 
-8. If using Unreal Engine or higher check [here](#unreal-scene-camera-bug) for a fix to the camera scene rendering bug in these engine versions!
+8. If using Unreal Engine 5.3 or higher check [here](#unreal-scene-camera-bug) for a fix to the camera scene rendering bug in these engine versions!
 
 9. Close Visual Studio and the  `Unreal Editor` and right-click the LandscapeMountains.uproject in Windows Explorer and select `Generate Visual Studio Project Files`.  This step detects all plugins and source files in your Unreal project and generates `.sln` file for Visual Studio.
 
