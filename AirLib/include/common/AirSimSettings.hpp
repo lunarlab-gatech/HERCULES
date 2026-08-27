@@ -272,6 +272,45 @@ namespace airlib
             float follow_distance = Utils::nan<float>();
         };
 
+        //tuning for the CPU-synthesized image types (ImageType::ThermalIR, ImageType::NightVision);
+        //everything has defaults so an unmodified settings.json works as-is
+        struct SyntheticCameraSetting
+        {
+            //per-object thermal properties keyed by a case-insensitive substring of the
+            //instance segmentation mesh name; takes priority over the built-in keyword
+            //classification (tree/road/car/fire/animal/...)
+            struct ThermalOverrideSetting
+            {
+                std::string match; //substring to look for in the mesh name
+                double temp_K = 295.0;
+                double emissivity = 0.90;
+                bool is_animal = false;
+                bool is_fire = false;
+                bool is_kangaroo = false;
+            };
+            struct ThermalIRSetting
+            {
+                double temp_min = 280.0;
+                double temp_max = 1300.0;
+                double eps_min = 0.80;
+                double eps_max = 0.99;
+                double depth_attenuation = 0.01; //intensity decay: 1 / (1 + k * depth_m)
+                std::vector<ThermalOverrideSetting> overrides;
+            };
+            struct NightVisionSetting
+            {
+                double temp_min = 285.0;
+                double temp_max = 310.0;
+                double eps_min = 0.85;
+                double eps_max = 0.98;
+                double blend_alpha = 0.25;
+                double nvg_gain = 1.0;
+                int seed = 42; //fixed seed for the per-label random temperature/emissivity LUT
+            };
+            ThermalIRSetting thermal_ir;
+            NightVisionSetting night_vision;
+        };
+
         struct SensorSetting
         {
             SensorBase::SensorType sensor_type;
@@ -517,6 +556,7 @@ namespace airlib
         std::map<std::string, PawnPath> pawn_paths; //path for pawn blueprint
         std::map<std::string, std::unique_ptr<VehicleSetting>> vehicles;
         CameraSetting camera_defaults;
+        SyntheticCameraSetting synthetic_camera;
         CameraDirectorSetting camera_director;
         std::map<std::string, std::unique_ptr<BeaconSetting>> beacons;
         std::map<std::string, std::unique_ptr<PassiveEchoBeaconSetting>> passive_echo_beacons;
@@ -553,6 +593,7 @@ namespace airlib
             loadCoreSimModeSettings(settings_json, simmode_getter);
             loadLevelSettings(settings_json);
             loadDefaultCameraSetting(settings_json, camera_defaults);
+            loadSyntheticCameraSetting(settings_json, synthetic_camera);
             loadCameraDirectorSetting(settings_json, camera_director, simmode_name);
             loadSubWindowsSettings(settings_json, subwindow_settings);
             loadAnnotatorSettings(settings_json, annotator_settings);
@@ -1506,6 +1547,51 @@ namespace airlib
                 camera_defaults = createCameraSetting(child_json, camera_defaults);
             }
         }
+        static void loadSyntheticCameraSetting(const Settings& settings_json, SyntheticCameraSetting& synthetic_camera)
+        {
+            Settings child_json;
+            if (settings_json.getChild("SyntheticCameraSettings", child_json)) {
+                Settings thermal_json;
+                if (child_json.getChild("ThermalIR", thermal_json)) {
+                    auto& t = synthetic_camera.thermal_ir;
+                    t.temp_min = thermal_json.getDouble("TempMin", t.temp_min);
+                    t.temp_max = thermal_json.getDouble("TempMax", t.temp_max);
+                    t.eps_min = thermal_json.getDouble("EpsMin", t.eps_min);
+                    t.eps_max = thermal_json.getDouble("EpsMax", t.eps_max);
+                    t.depth_attenuation = thermal_json.getDouble("DepthAttenuation", t.depth_attenuation);
+
+                    Settings overrides_json;
+                    if (thermal_json.getChild("Overrides", overrides_json)) {
+                        for (size_t child_index = 0; child_index < overrides_json.size(); ++child_index) {
+                            Settings override_json;
+                            if (overrides_json.getChild(child_index, override_json)) {
+                                SyntheticCameraSetting::ThermalOverrideSetting o;
+                                o.match = override_json.getString("Match", "");
+                                o.temp_K = override_json.getDouble("TempK", o.temp_K);
+                                o.emissivity = override_json.getDouble("Emissivity", o.emissivity);
+                                o.is_animal = override_json.getBool("IsAnimal", o.is_animal);
+                                o.is_fire = override_json.getBool("IsFire", o.is_fire);
+                                o.is_kangaroo = override_json.getBool("IsKangaroo", o.is_kangaroo);
+                                if (!o.match.empty())
+                                    t.overrides.push_back(o);
+                            }
+                        }
+                    }
+                }
+                Settings nvg_json;
+                if (child_json.getChild("NightVision", nvg_json)) {
+                    auto& n = synthetic_camera.night_vision;
+                    n.temp_min = nvg_json.getDouble("TempMin", n.temp_min);
+                    n.temp_max = nvg_json.getDouble("TempMax", n.temp_max);
+                    n.eps_min = nvg_json.getDouble("EpsMin", n.eps_min);
+                    n.eps_max = nvg_json.getDouble("EpsMax", n.eps_max);
+                    n.blend_alpha = nvg_json.getDouble("BlendAlpha", n.blend_alpha);
+                    n.nvg_gain = nvg_json.getDouble("NvgGain", n.nvg_gain);
+                    n.seed = nvg_json.getInt("Seed", n.seed);
+                }
+            }
+        }
+
         static void loadCameraDirectorSetting(const Settings& settings_json,
                                               CameraDirectorSetting& camera_director, const std::string& simmode_name)
         {
