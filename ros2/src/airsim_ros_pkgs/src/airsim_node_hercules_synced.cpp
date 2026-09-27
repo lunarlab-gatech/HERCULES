@@ -54,6 +54,7 @@ STRICT_MODE_ON
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <std_msgs/msg/float64.hpp>
+#include <std_msgs/msg/string.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <mutex>
@@ -123,12 +124,26 @@ struct Vehicle
     std::atomic<double> last_speed{0.0};          // car's current speed (m/s), cached each tick
     double vel_int = 0.0;                          // velocity-PID integrator (lockstep thread only)
 
-    // moveOnPath follower state (ported from CarRpcLibClient::moveOnPath, run per lockstep tick).
-    // Path is stored in GLOBAL NED (x,y) to match the native pose the control law uses.
+    // Path follower state, run per lockstep tick in GLOBAL NED (x,y).
     std::mutex follow_mtx;
     std::vector<std::pair<double, double>> follow_path;   // GLOBAL NED waypoints
-    size_t follow_index = 0;                              // forward-only index (moveOnPath)
+    size_t follow_index = 0;                              // legacy (kept for the stuck-nudge check)
     double last_ned_x = 0.0, last_ned_y = 0.0, last_yaw_ned = 0.0;  // cached global-NED pose
+    // --- tube follower (2026-09-27) ---
+    // fmode: 0 TRACK (pure pursuit on the projection), 1 ALIGN_FWD, 2 ALIGN_REV, 3 ALIGN_BRAKE.
+    // The ALIGN states are the K-turn: alternating forward-full-lock / reverse-full-lock segments
+    // that rotate a car-like robot essentially in place (measured 2026-09-27 on the UGVPawn:
+    // 176 deg in 6 segments, 0.14 m net displacement, <=0.55 m excursion).
+    int fmode = 0;
+    size_t proj_seg = 0;                                  // polyline segment of the current projection
+    double seg_moved = 0.0, seg_last_x = 0.0, seg_last_y = 0.0;
+    int align_segments = 0;                               // segments in the current align episode
+    int align_steer_sign = 0;                             // latched per segment
+    double align_target_yaw = 0.0;                        // FROZEN at align entry (see follow_step)
+    double xte = 0.0, alpha = 0.0;                        // diagnostics: cross-track error, heading error
+    double path_max_xte = 0.0, path_sum_xte = 0.0; int path_n = 0; int path_align_total = 0;
+    int diag_tick = 0;
+    rclcpp::Publisher<std_msgs::msg::String>::SharedPtr diag_pub;
 
     // cached LiDAR mount (queried once, ROS convention)
     bool lidar_mount_ready = false;
@@ -187,12 +202,45 @@ public:
         nudge_back_m_ = declare_parameter<double>("nudge_back_m", 1.5);
         drive_max_throttle_ = declare_parameter<double>("drive_max_throttle", 0.6);
         min_creep_throttle_ = declare_parameter<double>("min_creep_throttle", 0.08);  // beat static friction
-        // ported moveOnPath follower gains (CarRpcLibClient::moveOnPath: Kp_steering=1, max_steer=0.5)
-        follow_lookahead_ = declare_parameter<double>("follow_lookahead", 2.0);
+        // follower cruise speed and arrival radius (legacy names kept for the launch files)
+        follow_lookahead_ = declare_parameter<double>("follow_lookahead", 2.0);     // unused by the tube follower
         follow_desired_velocity_ = declare_parameter<double>("follow_desired_velocity", 0.4);
-        follow_kp_steer_ = declare_parameter<double>("follow_kp_steer", 1.0);
-        follow_max_steer_ = declare_parameter<double>("follow_max_steer", 0.5);
+        follow_kp_steer_ = declare_parameter<double>("follow_kp_steer", 1.0);         // unused by the tube follower
+        follow_max_steer_ = declare_parameter<double>("follow_max_steer", 0.5);       // unused by the tube follower
         follow_arrive_threshold_ = declare_parameter<double>("follow_arrive_threshold", 1.0);  // stop within this of goal
+        // --- TUBE FOLLOWER (2026-09-27). Why: the moveOnPath port capped steering at half lock
+        // (R ~ 2.8 m measured) and held cruise speed regardless of heading error, so a path that
+        // starts 100-150 deg off the robot's heading was executed as a 4-7 m arc -- next to a 2 m
+        // river channel that arc IS the river (pilot 2: planned paths crossed 5 m of water, driven
+        // paths 20 m). The tube follower (a) projects the robot onto the path and pursues a short
+        // lookahead with FULL steering authority (R ~ 0.85 m at full lock), (b) slows for heading
+        // error, cross-track error and upcoming corners, and (c) re-orients IN PLACE with a K-turn
+        // (alternating forward/reverse full-lock segments) whenever the heading error exceeds
+        // follow_align_enter_deg, instead of arcing. The planner's kinematics are otherwise
+        // unchanged: the executed trajectory now stays within a fraction of a metre of the plan.
+        follow_align_enter_deg_ = declare_parameter<double>("follow_align_enter_deg", 75.0);   // 90 deg grid corners: full-lock pursuit at creep; K-turn only beyond
+        follow_align_exit_deg_ = declare_parameter<double>("follow_align_exit_deg", 12.0);
+        follow_align_speed_ = declare_parameter<double>("follow_align_speed", 0.3);          // legacy (loop target); unused when align_throttle > 0
+        // K-turn segments run at CONSTANT throttle: this Chaos car barely turns below ~0.2 m/s (live
+        // 2026-09-27: full lock at ~0.1 m/s gave R ~ 2-3 m vs 0.85 m at 0.75 m/s), so the slow
+        // speed-loop segments turned only 4-14 deg each; the probe's constant-throttle segments
+        // turned ~30 deg. A speed guard brakes the segment if it runs away.
+        follow_align_throttle_ = declare_parameter<double>("follow_align_throttle", 0.05);
+        follow_align_vmax_ = declare_parameter<double>("follow_align_vmax", 1.0);
+        follow_track_min_speed_ = declare_parameter<double>("follow_track_min_speed", 0.3);     // never creep below the good-turning regime
+        follow_softstart_v_ = declare_parameter<double>("follow_softstart_v", 0.15);            // below this speed: throttle capped, integrator frozen
+        follow_softstart_throttle_ = declare_parameter<double>("follow_softstart_throttle", 0.08);
+        follow_softstart_steer_ = declare_parameter<double>("follow_softstart_steer", 0.6);        // max |steer| while starting from rest
+        follow_align_seg_m_ = declare_parameter<double>("follow_align_seg_m", 0.35);
+        follow_align_max_segments_ = declare_parameter<int>("follow_align_max_segments", 12);
+        follow_lookahead_min_ = declare_parameter<double>("follow_lookahead_min", 0.5);
+        follow_lookahead_max_ = declare_parameter<double>("follow_lookahead_max", 1.2);
+        follow_lookahead_gain_ = declare_parameter<double>("follow_lookahead_gain", 1.2);   // + gain * v
+        follow_wheelbase_ = declare_parameter<double>("follow_wheelbase", 1.0);            // R_fulllock*tan(50deg) = 0.85*1.19
+        follow_max_steer_deg_ = declare_parameter<double>("follow_max_steer_deg", 50.0);    // UGVWheelFront max_steer_angle
+        follow_xte_slow_ = declare_parameter<double>("follow_xte_slow", 0.3);              // above this: half speed
+        follow_corner_slow_deg_ = declare_parameter<double>("follow_corner_slow_deg", 50.0); // turn within lookahead -> 0.35 speed
+        follow_diag_every_ = declare_parameter<int>("follow_diag_every", 5);                 // ticks between /follow_diag msgs
 
         include_scene_rgb_ = declare_parameter<bool>("include_scene_rgb", false);
 
@@ -279,12 +327,24 @@ public:
                             }
                         }
                         std::lock_guard<std::mutex> lk(v->follow_mtx);
+                        if (!v->follow_path.empty() && v->path_n > 0) {
+                            RCLCPP_INFO(get_logger(), "[%s] path replaced: max_xte=%.2f mean_xte=%.2f align_segments=%d (%d ticks)",
+                                        v->name.c_str(), v->path_max_xte, v->path_sum_xte / v->path_n,
+                                        v->path_align_total, v->path_n);
+                        }
                         v->follow_path = std::move(pts);
                         v->follow_index = 0;
+                        v->proj_seg = 0; v->fmode = 0; v->align_segments = 0; v->align_steer_sign = 0;
+                        v->seg_moved = 0.0; v->path_max_xte = 0.0; v->path_sum_xte = 0.0; v->path_n = 0;
+                        v->path_align_total = 0;
                     });
+                v->diag_pub = create_publisher<std_msgs::msg::String>("/" + v->name + "/follow_diag", 10);
             }
-            RCLCPP_INFO(get_logger(), "hercules_synced_node: drive enabled -- moveOnPath follower on "
-                                      "/<vehicle>/follow_path, /cmd_vel for reverse/stop.");
+            RCLCPP_INFO(get_logger(), "hercules_synced_node: drive enabled -- TUBE follower on /<vehicle>/follow_path "
+                                      "(align_enter=%.0f deg, exit=%.0f deg, align throttle=%.2f seg=%.2f m, track floor %.2f m/s, lookahead %.1f-%.1f m, "
+                                      "wheelbase %.2f m, max steer %.0f deg), /cmd_vel for reverse/stop.",
+                        follow_align_enter_deg_, follow_align_exit_deg_, follow_align_throttle_, follow_align_seg_m_, follow_track_min_speed_,
+                        follow_lookahead_min_, follow_lookahead_max_, follow_wheelbase_, follow_max_steer_deg_);
         }
 
         {
@@ -330,6 +390,212 @@ public:
         }
     }
 
+    // velocity loop shared by TRACK and ALIGN: |speed| toward v_des; reverse = manual gear -1 with
+    // positive throttle (how the executor's /cmd_vel reverse has always driven the car).
+    void speed_loop(Vehicle &v, msr::airlib::CarApiBase::CarControls &ctrl, double speed_abs, double v_des, bool reverse)
+    {
+        if (reverse) { ctrl.is_manual_gear = true; ctrl.manual_gear = -1; }   // forward: caller decides the gear
+        const double err = v_des - speed_abs;
+        if (err > 0.0) {
+            // SOFT START + anti-windup: from a standstill this car needs only ~0.05 throttle to move
+            // (probe: 0.03 -> 1 m/s within a metre), and at large steering angles a high throttle
+            // just spins the wheels (live 2026-09-27, course B: 0.6 throttle at full lock, v ~ 0 for
+            // 40 s). While the car is below follow_softstart_v the throttle is capped and the
+            // integrator is frozen, so the loop cannot wind up against a stationary vehicle.
+            const bool starting = speed_abs < follow_softstart_v_;
+            if (!starting) v.vel_int = std::max(-1.0, std::min(1.0, v.vel_int + err * sync_dt_));
+            const double thr = vel_kp_ * err + vel_ki_ * v.vel_int;
+            const double cap = starting ? follow_softstart_throttle_ : drive_max_throttle_;
+            ctrl.throttle = std::max(min_creep_throttle_, std::min(cap, thr));
+            ctrl.brake = 0.0;
+        } else {
+            ctrl.throttle = 0.0; ctrl.brake = std::min(1.0, brake_kp_ * (-err)); v.vel_int = 0.0;
+        }
+    }
+
+    // Closest point of p on segment a->b; returns t in [0,1] and writes the point.
+    static inline double projectOnSeg(double ax, double ay, double bx, double by, double px, double py,
+                                      double &qx, double &qy)
+    {
+        const double vx = bx - ax, vy = by - ay, L2 = vx * vx + vy * vy;
+        double t = 0.0;
+        if (L2 > 1e-12) t = std::max(0.0, std::min(1.0, ((px - ax) * vx + (py - ay) * vy) / L2));
+        qx = ax + t * vx; qy = ay + t * vy;
+        return t;
+    }
+
+    // TUBE follower. Returns true when a path is being followed (ctrl filled), false when there is
+    // no path (caller falls through to /cmd_vel velocity mode).
+    bool follow_step(Vehicle &v, msr::airlib::CarApiBase::CarControls &ctrl, double speed_abs)
+    {
+        std::lock_guard<std::mutex> lk(v.follow_mtx);
+        auto &path = v.follow_path;
+        if (path.empty()) return false;
+        const double px = v.last_ned_x, py = v.last_ned_y, yaw = v.last_yaw_ned;
+        // TERMINAL: within the arrival radius of the path end -> stop and CLEAR the path so the
+        // car stays stopped even if the executor is late/dead.
+        if (dist2D(px, py, path.back().first, path.back().second) < follow_arrive_threshold_) {
+            RCLCPP_INFO(get_logger(), "[%s] path done: max_xte=%.2f mean_xte=%.2f align_segments=%d (%d ticks)",
+                        v.name.c_str(), v.path_max_xte, v.path_n ? v.path_sum_xte / v.path_n : 0.0,
+                        v.path_align_total, v.path_n);
+            path.clear(); v.follow_index = 0; v.fmode = 0;
+            return false;
+        }
+        const size_t n = path.size();
+        if (n < 2) {                                   // single point: drive straight at it
+            const double a = normalizeAngle(std::atan2(path[0].second - py, path[0].first - px) - yaw);
+            ctrl.steering = std::clamp(a * 2.0, -1.0, 1.0);
+            speed_loop(v, ctrl, speed_abs, std::min(follow_align_speed_, v.terrain_max_speed.load()), false);
+            return true;
+        }
+        // 1. PROJECTION onto the polyline, searched in a window around the current segment so a
+        //    hairpin that passes near the robot cannot steal the projection.
+        size_t s0 = v.proj_seg > 3 ? v.proj_seg - 3 : 0;
+        size_t s1 = std::min(n - 1, v.proj_seg + 40);   // 40 segments ~ 8 m of 0.2 m cells
+        double best = 1e18, bt = 0.0, bqx = px, bqy = py; size_t bseg = v.proj_seg;
+        for (size_t i = s0; i + 1 <= s1 && i + 1 < n; ++i) {
+            double qx, qy;
+            const double t = projectOnSeg(path[i].first, path[i].second, path[i + 1].first, path[i + 1].second, px, py, qx, qy);
+            const double d = dist2D(px, py, qx, qy);
+            if (d < best - 1e-9) { best = d; bt = t; bqx = qx; bqy = qy; bseg = i; }
+        }
+        v.proj_seg = bseg;
+        v.xte = best;
+        // path tangent at the projection (skip zero-length segments)
+        double tang = yaw;
+        for (size_t i = bseg; i + 1 < n; ++i) {
+            const double dx = path[i + 1].first - path[i].first, dy = path[i + 1].second - path[i].second;
+            if (dx * dx + dy * dy > 1e-8) { tang = std::atan2(dy, dx); break; }
+        }
+        // 2. LOOKAHEAD point at arc length L ahead of the projection (L shrinks in ALIGN so the
+        //    target heading is the local path direction, not a far-away point).
+        const double L = (v.fmode == 0)
+            ? std::clamp(follow_lookahead_min_ + follow_lookahead_gain_ * speed_abs, follow_lookahead_min_, follow_lookahead_max_)
+            : follow_lookahead_min_;
+        double tx = bqx, ty = bqy, acc = 0.0; size_t i = bseg;
+        {
+            // remainder of the projection segment first
+            double cx = bqx, cy = bqy;
+            while (i + 1 < n) {
+                const double nx = path[i + 1].first, ny = path[i + 1].second;
+                const double seg = dist2D(cx, cy, nx, ny);
+                if (acc + seg >= L) {
+                    const double f = seg > 1e-9 ? (L - acc) / seg : 0.0;
+                    tx = cx + f * (nx - cx); ty = cy + f * (ny - cy); acc = L; break;
+                }
+                acc += seg; cx = nx; cy = ny; tx = nx; ty = ny; ++i;
+            }
+        }
+        // sharpest turn within the lookahead window (corner anticipation)
+        double turn_ahead = 0.0;
+        {
+            double prev = tang; double walked = 0.0;
+            for (size_t j = bseg; j + 1 < n && walked < follow_lookahead_max_; ++j) {
+                const double dx = path[j + 1].first - path[j].first, dy = path[j + 1].second - path[j].second;
+                const double l = std::sqrt(dx * dx + dy * dy);
+                if (l < 1e-6) continue;
+                const double d = std::atan2(dy, dx);
+                turn_ahead = std::max(turn_ahead, std::fabs(normalizeAngle(d - prev)));
+                prev = d; walked += l;
+            }
+        }
+        const double alpha = normalizeAngle(std::atan2(ty - py, tx - px) - yaw);   // heading error to the lookahead point
+        v.alpha = alpha;
+        v.path_max_xte = std::max(v.path_max_xte, best); v.path_sum_xte += best; v.path_n++;
+        const double enter = follow_align_enter_deg_ * M_PI / 180.0, exit = follow_align_exit_deg_ * M_PI / 180.0;
+        const double vcap = std::min(follow_desired_velocity_, v.terrain_max_speed.load());
+        // 3. MODE transitions
+        if (v.fmode == 0 && std::fabs(alpha) > enter) {
+            v.fmode = 3;                                 // brake first, then start the K-turn
+            v.align_segments = 0; v.align_steer_sign = 0;
+            // The target heading is FROZEN for the whole episode. Recomputing it from a lookahead
+            // point while the robot shuffles through a K-turn let the point hop around a corner,
+            // flipped the sign of the error mid-segment and made the turn oscillate (live 2026-09-27:
+            // +56 -> -67 deg, 12 segments, gave up). The robot barely moves during a K-turn, so the
+            // direction to rejoin the path is a constant; TRACK absorbs the residual afterwards.
+            v.align_target_yaw = std::atan2(ty - py, tx - px);
+            RCLCPP_INFO(get_logger(), "[%s] ALIGN: heading error %.0f deg (xte %.2f m) -> K-turn in place toward %.0f deg",
+                        v.name.c_str(), alpha * 180.0 / M_PI, best, v.align_target_yaw * 180.0 / M_PI);
+        }
+        // error against the frozen target while aligning; against the live lookahead otherwise
+        const double a_err = (v.fmode == 0) ? alpha : normalizeAngle(v.align_target_yaw - yaw);
+        if (v.fmode == 0) {
+            // ---- TRACK: pure pursuit with full steering authority, gated speed ----
+            const double kappa = 2.0 * std::sin(alpha) / std::max(L, 0.2);
+            const double delta = std::atan(kappa * follow_wheelbase_);               // bicycle model
+            ctrl.steering = std::clamp(delta / (follow_max_steer_deg_ * M_PI / 180.0), -1.0, 1.0);
+            // FULL LOCK FROM A STANDSTILL JAMS THIS CAR (live 2026-09-27: steer 1.0 + any throttle
+            // from rest = 0.00 m, engine idle; 0.6 lock moves freely; lock applied while braked and
+            // THEN throttled also moves -- the K-turn's brake phase does exactly that). TRACK caps
+            // the lock until the car is rolling.
+            if (speed_abs < follow_softstart_v_)
+                ctrl.steering = static_cast<float>(std::clamp(static_cast<double>(ctrl.steering),
+                                                              -follow_softstart_steer_, follow_softstart_steer_));
+            double sf = 1.0;
+            const double a_abs = std::fabs(alpha);
+            if (a_abs > 15.0 * M_PI / 180.0)           // 15 deg .. enter: 1.0 -> 0.35
+                sf = std::max(0.35, 1.0 - (a_abs - 15.0 * M_PI / 180.0) / std::max(enter - 15.0 * M_PI / 180.0, 1e-3) * 0.65);
+            if (best > follow_xte_slow_) sf = std::min(sf, 0.5);
+            if (turn_ahead > follow_corner_slow_deg_ * M_PI / 180.0) sf = std::min(sf, 0.35);
+            ctrl.is_manual_gear = true; ctrl.manual_gear = 1;      // explicit forward gear (see ALIGN)
+            speed_loop(v, ctrl, speed_abs, std::max(std::min(follow_track_min_speed_, vcap), vcap * sf), false);
+        } else if (v.fmode == 3) {
+            // ---- ALIGN_BRAKE: come to rest, then decide ----
+            ctrl.throttle = 0.0; ctrl.brake = 1.0; v.vel_int = 0.0;
+            ctrl.steering = (v.align_steer_sign != 0) ? -static_cast<double>(v.align_steer_sign) : 0.0;   // pre-set the NEXT segment's lock (alternates)
+            if (speed_abs < 0.06) {
+                if (std::fabs(a_err) < exit || v.align_segments >= follow_align_max_segments_) {
+                    if (v.align_segments >= follow_align_max_segments_ && std::fabs(a_err) >= exit)
+                        RCLCPP_WARN(get_logger(), "[%s] ALIGN gave up after %d segments (heading error %.0f deg) -> TRACK",
+                                    v.name.c_str(), v.align_segments, a_err * 180.0 / M_PI);
+                    else
+                        RCLCPP_INFO(get_logger(), "[%s] ALIGNED after %d segments (residual %.0f deg to target, %.0f deg to lookahead, xte %.2f m) -> TRACK",
+                                    v.name.c_str(), v.align_segments, a_err * 180.0 / M_PI, alpha * 180.0 / M_PI, best);
+                    v.fmode = 0;
+                } else {
+                    // next K-turn segment: alternate FWD / REV; steer sign latched so a segment
+                    // never chatters. FWD full lock toward the target; REV with the OPPOSITE lock
+                    // turns the heading the same way (measured: rev steer -1 -> yaw rate +56 deg/s).
+                    const bool fwd = (v.align_segments % 2 == 0);
+                    const int sgn = a_err >= 0.0 ? 1 : -1;
+                    v.align_steer_sign = fwd ? sgn : -sgn;
+                    v.fmode = fwd ? 1 : 2;
+                    v.seg_moved = 0.0; v.seg_last_x = px; v.seg_last_y = py;
+                    v.align_segments++; v.path_align_total++;
+                }
+            }
+        } else {
+            // ---- ALIGN_FWD (1) / ALIGN_REV (2): one full-lock segment of follow_align_seg_m ----
+            v.seg_moved += dist2D(px, py, v.seg_last_x, v.seg_last_y);
+            v.seg_last_x = px; v.seg_last_y = py;
+            ctrl.steering = static_cast<double>(v.align_steer_sign);
+            // gears are set EXPLICITLY (gear_immediate): letting the automatic box shift back from
+            // the reverse leg cost most of a 0.35 m forward segment (auto-box latency), which is
+            // why the first live K-turns turned only 4-14 deg per segment.
+            ctrl.is_manual_gear = true; ctrl.manual_gear = (v.fmode == 2) ? -1 : 1;
+            if (follow_align_throttle_ > 0.0) {
+                if (speed_abs < follow_align_vmax_) { ctrl.throttle = follow_align_throttle_; ctrl.brake = 0.0; }
+                else { ctrl.throttle = 0.0; ctrl.brake = 0.5; }
+                v.vel_int = 0.0;
+            } else {
+                speed_loop(v, ctrl, speed_abs, follow_align_speed_, v.fmode == 2);
+            }
+            if (v.seg_moved >= follow_align_seg_m_ || std::fabs(a_err) < exit) {
+                v.fmode = 3;                             // brake, then re-evaluate
+            }
+        }
+        // 4. diagnostics
+        if (v.diag_pub && (++v.diag_tick % std::max(1, follow_diag_every_)) == 0) {
+            char buf[256];
+            std::snprintf(buf, sizeof(buf),
+                          "{\"mode\":%d,\"xte\":%.3f,\"alpha_deg\":%.1f,\"aerr_deg\":%.1f,\"v\":%.3f,\"steer\":%.2f,\"seg\":%zu,\"L\":%.2f,\"turn_ahead_deg\":%.0f,\"align_segs\":%d,\"brake\":%.2f,\"thr\":%.2f,\"gear\":%d}",
+                          v.fmode, best, alpha * 180.0 / M_PI, a_err * 180.0 / M_PI, speed_abs, ctrl.steering, bseg, L,
+                          turn_ahead * 180.0 / M_PI, v.align_segments, ctrl.brake, ctrl.throttle, ctrl.is_manual_gear ? ctrl.manual_gear : 0);
+            std_msgs::msg::String m; m.data = buf; v.diag_pub->publish(m);
+        }
+        return true;
+    }
+
     void apply_controls(Vehicle &v)
     {
         if (!enable_drive_) {
@@ -338,60 +604,10 @@ public:
         const double speed = v.last_speed.load();
         msr::airlib::CarApiBase::CarControls ctrl;
 
-        // --- PATH MODE: follow the committed path via the ported moveOnPath control law, run ONCE
-        // per lockstep tick in native NED (steps mirror CarRpcLibClient::moveOnPath lines 169-219:
-        // forward index stepping + distance-based lookahead + pure-pursuit). Throttle uses the
-        // velocity+brake loop so the brakeless car actually holds the slow setpoint. ---
-        double tx = 0.0, ty = 0.0;
-        bool have_path = false;
-        {
-            std::lock_guard<std::mutex> lk(v.follow_mtx);
-            if (!v.follow_path.empty()) {
-                auto &path = v.follow_path;
-                const double px = v.last_ned_x, py = v.last_ned_y;
-                // TERMINAL (moveOnPath lines 153-157): reached the path end -> stop and CLEAR the
-                // path so the car stays stopped. Safety net if the executor is late/dead -- without
-                // it the follower (which has no self-stop) would orbit the last waypoint forever.
-                if (dist2D(px, py, path.back().first, path.back().second) < follow_arrive_threshold_) {
-                    path.clear();
-                    v.follow_index = 0;
-                    // have_path stays false -> falls through to velocity-mode STOP (brake) below.
-                }
-            }
-            if (!v.follow_path.empty()) {
-                have_path = true;
-                const auto &path = v.follow_path;
-                const double px = v.last_ned_x, py = v.last_ned_y;
-                // forward-only index stepping: advance while closer to the NEXT waypoint
-                while (v.follow_index + 1 < path.size()) {
-                    const double d_cur = dist2D(px, py, path[v.follow_index].first, path[v.follow_index].second);
-                    const double d_next = dist2D(px, py, path[v.follow_index + 1].first, path[v.follow_index + 1].second);
-                    if (d_next < d_cur) v.follow_index++;
-                    else break;
-                }
-                // distance-based lookahead: first waypoint at least follow_lookahead_ away
-                size_t tgt = path.size() - 1;
-                for (size_t i = v.follow_index + 1; i < path.size(); ++i) {
-                    if (dist2D(px, py, path[i].first, path[i].second) >= follow_lookahead_) { tgt = i; break; }
-                }
-                tx = path[tgt].first; ty = path[tgt].second;
-            }
-        }
-        if (have_path) {
-            const double desired_heading = std::atan2(ty - v.last_ned_y, tx - v.last_ned_x);
-            ctrl.steering = std::clamp(follow_kp_steer_ * normalizeAngle(desired_heading - v.last_yaw_ned),
-                                       -follow_max_steer_, follow_max_steer_);
-            const double v_des = std::min(follow_desired_velocity_,
-                                          v.terrain_max_speed.load());
-            const double err = v_des - speed;
-            if (err > 0.0) {
-                v.vel_int = std::max(-1.0, std::min(1.0, v.vel_int + err * sync_dt_));
-                double thr = vel_kp_ * err + vel_ki_ * v.vel_int;
-                ctrl.throttle = std::max(min_creep_throttle_, std::min(drive_max_throttle_, thr));
-                ctrl.brake = 0.0;
-            } else {
-                ctrl.throttle = 0.0; ctrl.brake = std::min(1.0, brake_kp_ * (-err)); v.vel_int = 0.0;
-            }
+        // --- PATH MODE: the TUBE follower (see the parameter block for the rationale). Runs once
+        // per lockstep tick in native NED. Throttle uses the velocity+brake loop so the brakeless
+        // car holds the slow setpoints. ---
+        if (follow_step(v, ctrl, speed)) {
             try { client_->setCarControls(ctrl, v.name); } catch (...) {}
             return;
         }
@@ -980,6 +1196,13 @@ private:
     double vel_kp_ = 1.5, vel_ki_ = 0.5, brake_kp_ = 3.0, drive_max_throttle_ = 0.6, min_creep_throttle_ = 0.08;
     double follow_lookahead_ = 2.0, follow_desired_velocity_ = 0.4, follow_kp_steer_ = 1.0, follow_max_steer_ = 0.5;
     double follow_arrive_threshold_ = 1.0;
+    double follow_align_enter_deg_ = 75.0, follow_align_exit_deg_ = 12.0, follow_align_speed_ = 0.3;
+    double follow_align_seg_m_ = 0.35; int follow_align_max_segments_ = 12;
+    double follow_align_throttle_ = 0.05, follow_align_vmax_ = 1.0, follow_track_min_speed_ = 0.3;
+    double follow_softstart_v_ = 0.15, follow_softstart_throttle_ = 0.08, follow_softstart_steer_ = 0.6;
+    double follow_lookahead_min_ = 0.5, follow_lookahead_max_ = 1.2, follow_lookahead_gain_ = 1.2;
+    double follow_wheelbase_ = 1.0, follow_max_steer_deg_ = 50.0, follow_xte_slow_ = 0.3, follow_corner_slow_deg_ = 50.0;
+    int follow_diag_every_ = 5;
     bool include_scene_rgb_ = false;
     int retry_ceiling_ = 2000;
     double retry_timeout_s_ = 10.0;
