@@ -182,9 +182,13 @@ public:
         max_forward_speed_ = declare_parameter<double>("max_forward_speed", 2.0);
         max_yaw_rate_ = declare_parameter<double>("max_yaw_rate", 1.2);
         // velocity-loop gains (throttle + brake) for the slow, smooth path follower
-        vel_kp_ = declare_parameter<double>("vel_kp", 1.5);
-        vel_ki_ = declare_parameter<double>("vel_ki", 0.5);
-        brake_kp_ = declare_parameter<double>("brake_kp", 3.0);      // over-speed brake proportionality
+        // (retuned 2026-09-27 for the PhysXCar/UGVPawn engine, see speed_loop: small gains, no
+        // standing floor, coast band before braking)
+        vel_kp_ = declare_parameter<double>("vel_kp", 0.25);
+        vel_ki_ = declare_parameter<double>("vel_ki", 0.05);
+        vel_int_max_ = declare_parameter<double>("vel_int_max", 2.0);     // ki * this = max integrator throttle (full lock needs ~0.1-0.2)
+        brake_kp_ = declare_parameter<double>("brake_kp", 0.5);      // over-speed brake proportionality (beyond the deadband); harness 2026-09-27: kp 0.25 / brake 0.5 holds 0.40 m/s flat (std 0.08)
+        brake_deadband_ = declare_parameter<double>("brake_deadband", 0.05);  // m/s over target before the brake acts
         // FALL-THROUGH RESCUE: a hard prop collision can punch a vehicle through the terrain's
         // one-sided collision mesh (unbounded depenetration impulse); it then free-falls under
         // the world (and the dangling pawn used to crash the editor). NED z grows DOWNWARD:
@@ -201,7 +205,7 @@ public:
         stuck_min_motion_ = declare_parameter<double>("stuck_min_motion", 0.3);
         nudge_back_m_ = declare_parameter<double>("nudge_back_m", 1.5);
         drive_max_throttle_ = declare_parameter<double>("drive_max_throttle", 0.6);
-        min_creep_throttle_ = declare_parameter<double>("min_creep_throttle", 0.08);  // beat static friction
+        min_creep_throttle_ = declare_parameter<double>("min_creep_throttle", 0.03);  // beat static friction (applied only while starting from rest)
         // follower cruise speed and arrival radius (legacy names kept for the launch files)
         follow_lookahead_ = declare_parameter<double>("follow_lookahead", 2.0);     // unused by the tube follower
         follow_desired_velocity_ = declare_parameter<double>("follow_desired_velocity", 0.4);
@@ -226,13 +230,17 @@ public:
         // speed-loop segments turned only 4-14 deg each; the probe's constant-throttle segments
         // turned ~30 deg. A speed guard brakes the segment if it runs away.
         follow_align_throttle_ = declare_parameter<double>("follow_align_throttle", 0.05);
-        follow_align_vmax_ = declare_parameter<double>("follow_align_vmax", 1.0);
+        follow_align_vmax_ = declare_parameter<double>("follow_align_vmax", 1.0);   // legs brake above this (0.9 m/s legs overshot and drifted 20 deg while braking)
+        follow_align_tangent_xte_ = declare_parameter<double>("follow_align_tangent_xte", 0.0);  // within this of the path: align to the path direction, not the bearing
         follow_track_min_speed_ = declare_parameter<double>("follow_track_min_speed", 0.3);     // never creep below the good-turning regime
         follow_softstart_v_ = declare_parameter<double>("follow_softstart_v", 0.15);            // below this speed: throttle capped, integrator frozen
         follow_softstart_throttle_ = declare_parameter<double>("follow_softstart_throttle", 0.08);
         follow_softstart_steer_ = declare_parameter<double>("follow_softstart_steer", 0.6);        // max |steer| while starting from rest
         follow_align_seg_m_ = declare_parameter<double>("follow_align_seg_m", 0.35);
         follow_align_max_segments_ = declare_parameter<int>("follow_align_max_segments", 12);
+        follow_align_reverse_first_ = declare_parameter<bool>("follow_align_reverse_first", false);  // v4 K-turn is the validated default (2026-09-27 harness: reverse-first + asymmetric legs + 0.5 m/s leg cap crawled/jammed, 2.5x path); the options stay for later work
+        follow_align_seg_fwd_m_ = declare_parameter<double>("follow_align_seg_fwd_m", 0.0);   // asymmetric legs: footprint drifts backward
+        follow_align_seg_rev_m_ = declare_parameter<double>("follow_align_seg_rev_m", 0.0);   // (<= 0 -> follow_align_seg_m for both)
         follow_lookahead_min_ = declare_parameter<double>("follow_lookahead_min", 0.5);
         follow_lookahead_max_ = declare_parameter<double>("follow_lookahead_max", 1.2);
         follow_lookahead_gain_ = declare_parameter<double>("follow_lookahead_gain", 1.2);   // + gain * v
@@ -340,11 +348,15 @@ public:
                     });
                 v->diag_pub = create_publisher<std_msgs::msg::String>("/" + v->name + "/follow_diag", 10);
             }
-            RCLCPP_INFO(get_logger(), "hercules_synced_node: drive enabled -- TUBE follower on /<vehicle>/follow_path "
-                                      "(align_enter=%.0f deg, exit=%.0f deg, align throttle=%.2f seg=%.2f m, track floor %.2f m/s, lookahead %.1f-%.1f m, "
-                                      "wheelbase %.2f m, max steer %.0f deg), /cmd_vel for reverse/stop.",
-                        follow_align_enter_deg_, follow_align_exit_deg_, follow_align_throttle_, follow_align_seg_m_, follow_track_min_speed_,
-                        follow_lookahead_min_, follow_lookahead_max_, follow_wheelbase_, follow_max_steer_deg_);
+            RCLCPP_INFO(get_logger(), "hercules_synced_node: drive enabled -- TUBE follower v5 on /<vehicle>/follow_path "
+                                      "(align_enter=%.0f deg, exit=%.0f deg, align throttle=%.2f legs fwd %.2f / rev %.2f m %s-first, track floor %.2f m/s, lookahead %.1f-%.1f m, "
+                                      "wheelbase %.2f m, max steer %.0f deg; speed loop kp=%.2f ki=%.2f creep=%.2f brake kp=%.1f deadband=%.2f), /cmd_vel for reverse/stop.",
+                        follow_align_enter_deg_, follow_align_exit_deg_, follow_align_throttle_,
+                        follow_align_seg_fwd_m_ > 0.0 ? follow_align_seg_fwd_m_ : follow_align_seg_m_,
+                        follow_align_seg_rev_m_ > 0.0 ? follow_align_seg_rev_m_ : follow_align_seg_m_,
+                        follow_align_reverse_first_ ? "reverse" : "forward", follow_track_min_speed_,
+                        follow_lookahead_min_, follow_lookahead_max_, follow_wheelbase_, follow_max_steer_deg_,
+                        vel_kp_, vel_ki_, min_creep_throttle_, brake_kp_, brake_deadband_);
         }
 
         {
@@ -396,20 +408,30 @@ public:
     {
         if (reverse) { ctrl.is_manual_gear = true; ctrl.manual_gear = -1; }   // forward: caller decides the gear
         const double err = v_des - speed_abs;
-        if (err > 0.0) {
-            // SOFT START + anti-windup: from a standstill this car needs only ~0.05 throttle to move
-            // (probe: 0.03 -> 1 m/s within a metre), and at large steering angles a high throttle
-            // just spins the wheels (live 2026-09-27, course B: 0.6 throttle at full lock, v ~ 0 for
-            // 40 s). While the car is below follow_softstart_v the throttle is capped and the
-            // integrator is frozen, so the loop cannot wind up against a stationary vehicle.
+        if (err > -brake_deadband_) {
+            // THROTTLE regime (including a small over-speed band where the car just coasts).
+            // This engine is strong at the bottom of the pedal (probe: 0.03 -> 1 m/s within a
+            // metre), so the loop is PI with SMALL gains and NO standing throttle floor once the
+            // car rolls: the old floor of 0.08 whenever err > 0 made every tick either a hard
+            // launch (0.08 -> 0.55 m/s in 0.5 s) or a hard brake -- a 0.06/0.58 m/s sawtooth
+            // (pilot diag 2026-09-27). SOFT START: below follow_softstart_v the throttle is
+            // capped (full lock + high throttle from rest jams the car), a creep floor beats
+            // static friction, and the integrator winds at half rate so a car that does not move
+            // (slope, rough ground) works its way up to the cap instead of sitting on the floor.
+            // Engine map (probe 2026-09-27, fresh PIE): throttle 0.012 -> no motion at all, 0.020 ->
+            // 0.5 m/s^2 with NO steady state below ~3 m/s. So no throttle holds a low speed; the
+            // loop pulses a small throttle below target and COASTS (throttle 0) in the band above
+            // it -- kp 0.25 lifts a 0.1 m/s error over the 0.012 dead zone; validated on the harness.
             const bool starting = speed_abs < follow_softstart_v_;
-            if (!starting) v.vel_int = std::max(-1.0, std::min(1.0, v.vel_int + err * sync_dt_));
-            const double thr = vel_kp_ * err + vel_ki_ * v.vel_int;
+            const double int_rate = starting ? 0.5 : 1.0;
+            v.vel_int = std::max(0.0, std::min(vel_int_max_, v.vel_int + err * sync_dt_ * int_rate));
+            double thr = (err > 0.0) ? vel_kp_ * err + vel_ki_ * v.vel_int : 0.0;
             const double cap = starting ? follow_softstart_throttle_ : drive_max_throttle_;
-            ctrl.throttle = std::max(min_creep_throttle_, std::min(cap, thr));
+            const double floor = (starting && err > 0.0) ? min_creep_throttle_ : 0.0;
+            ctrl.throttle = std::max(floor, std::min(cap, thr));
             ctrl.brake = 0.0;
         } else {
-            ctrl.throttle = 0.0; ctrl.brake = std::min(1.0, brake_kp_ * (-err)); v.vel_int = 0.0;
+            ctrl.throttle = 0.0; ctrl.brake = std::min(1.0, brake_kp_ * (-err - brake_deadband_)); v.vel_int = 0.0;
         }
     }
 
@@ -513,9 +535,22 @@ public:
             // flipped the sign of the error mid-segment and made the turn oscillate (live 2026-09-27:
             // +56 -> -67 deg, 12 segments, gave up). The robot barely moves during a K-turn, so the
             // direction to rejoin the path is a constant; TRACK absorbs the residual afterwards.
-            v.align_target_yaw = std::atan2(ty - py, tx - px);
-            RCLCPP_INFO(get_logger(), "[%s] ALIGN: heading error %.0f deg (xte %.2f m) -> K-turn in place toward %.0f deg",
-                        v.name.c_str(), alpha * 180.0 / M_PI, best, v.align_target_yaw * 180.0 / M_PI);
+            // NEAR the path (a path that starts at the robot and runs behind it -- every planner
+            // path with a >75 deg initial turn) the target is the PATH DIRECTION at the lookahead,
+            // not the bearing to the lookahead point: with reverse-first legs the robot moves ALONG
+            // such a path during the K-turn, the projection advances past the old lookahead and the
+            // bearing target flips sign on exit (harness v5A 2026-09-27: +80 -> -155 deg chatter,
+            // 2.2x path length). Far from the path the bearing is still the right thing to face.
+            double tang_la = tang;
+            if (i + 1 < n) {
+                const double dx = path[i + 1].first - path[i].first, dy = path[i + 1].second - path[i].second;
+                if (dx * dx + dy * dy > 1e-8) tang_la = std::atan2(dy, dx);
+            }
+            const bool near_path = best < follow_align_tangent_xte_;
+            v.align_target_yaw = near_path ? tang_la : std::atan2(ty - py, tx - px);
+            RCLCPP_INFO(get_logger(), "[%s] ALIGN: heading error %.0f deg (xte %.2f m) -> K-turn in place toward %.0f deg (%s)",
+                        v.name.c_str(), alpha * 180.0 / M_PI, best, v.align_target_yaw * 180.0 / M_PI,
+                        near_path ? "path tangent" : "bearing to lookahead");
         }
         // error against the frozen target while aligning; against the live lookahead otherwise
         const double a_err = (v.fmode == 0) ? alpha : normalizeAngle(v.align_target_yaw - yaw);
@@ -553,10 +588,16 @@ public:
                                     v.name.c_str(), v.align_segments, a_err * 180.0 / M_PI, alpha * 180.0 / M_PI, best);
                     v.fmode = 0;
                 } else {
-                    // next K-turn segment: alternate FWD / REV; steer sign latched so a segment
+                    // next K-turn segment: alternate REV / FWD; steer sign latched so a segment
                     // never chatters. FWD full lock toward the target; REV with the OPPOSITE lock
                     // turns the heading the same way (measured: rev steer -1 -> yaw rate +56 deg/s).
-                    const bool fwd = (v.align_segments % 2 == 0);
+                    // REVERSE FIRST: a K-turn happens at a path start, where the robot stands at
+                    // the end of its previous path facing that path's goal -- typically a frontier
+                    // at a bank or unknown ground -- while the ground BEHIND it is its own track.
+                    // Pilot 2026-09-27 (Husky3 r1): a forward-first K-turn at a bank swept 0.7 m
+                    // into water before the first reverse leg; reverse-first keeps the footprint
+                    // on driven ground.
+                    const bool fwd = follow_align_reverse_first_ ? (v.align_segments % 2 == 1) : (v.align_segments % 2 == 0);
                     const int sgn = a_err >= 0.0 ? 1 : -1;
                     v.align_steer_sign = fwd ? sgn : -sgn;
                     v.fmode = fwd ? 1 : 2;
@@ -580,7 +621,12 @@ public:
             } else {
                 speed_loop(v, ctrl, speed_abs, follow_align_speed_, v.fmode == 2);
             }
-            if (v.seg_moved >= follow_align_seg_m_ || std::fabs(a_err) < exit) {
+            // ASYMMETRIC legs (v5): short forward / long reverse legs bias the K-turn footprint
+            // BACKWARD, away from whatever the robot was facing when its path ended (a bank, in
+            // 3 of the 4 wet K-turns of the 2026-09-27 pilot the FIRST wet leg was a forward one).
+            const double seg_len = (v.fmode == 2) ? (follow_align_seg_rev_m_ > 0.0 ? follow_align_seg_rev_m_ : follow_align_seg_m_)
+                                                  : (follow_align_seg_fwd_m_ > 0.0 ? follow_align_seg_fwd_m_ : follow_align_seg_m_);
+            if (v.seg_moved >= seg_len || std::fabs(a_err) < exit) {
                 v.fmode = 3;                             // brake, then re-evaluate
             }
         }
@@ -1193,11 +1239,13 @@ private:
     double cam_x_, cam_y_, cam_z_, cam_roll_, cam_pitch_, cam_yaw_;
     bool enable_drive_ = false;
     double max_forward_speed_ = 2.0, max_yaw_rate_ = 1.2;
-    double vel_kp_ = 1.5, vel_ki_ = 0.5, brake_kp_ = 3.0, drive_max_throttle_ = 0.6, min_creep_throttle_ = 0.08;
+    double vel_kp_ = 0.25, vel_ki_ = 0.05, vel_int_max_ = 2.0, brake_kp_ = 0.5, brake_deadband_ = 0.05;
+    double drive_max_throttle_ = 0.6, min_creep_throttle_ = 0.03;
     double follow_lookahead_ = 2.0, follow_desired_velocity_ = 0.4, follow_kp_steer_ = 1.0, follow_max_steer_ = 0.5;
     double follow_arrive_threshold_ = 1.0;
     double follow_align_enter_deg_ = 75.0, follow_align_exit_deg_ = 12.0, follow_align_speed_ = 0.3;
-    double follow_align_seg_m_ = 0.35; int follow_align_max_segments_ = 12;
+    double follow_align_seg_m_ = 0.35, follow_align_seg_fwd_m_ = 0.0, follow_align_seg_rev_m_ = 0.0, follow_align_tangent_xte_ = 0.0;
+    int follow_align_max_segments_ = 12; bool follow_align_reverse_first_ = false;
     double follow_align_throttle_ = 0.05, follow_align_vmax_ = 1.0, follow_track_min_speed_ = 0.3;
     double follow_softstart_v_ = 0.15, follow_softstart_throttle_ = 0.08, follow_softstart_steer_ = 0.6;
     double follow_lookahead_min_ = 0.5, follow_lookahead_max_ = 1.2, follow_lookahead_gain_ = 1.2;
