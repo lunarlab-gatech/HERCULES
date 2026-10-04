@@ -55,12 +55,25 @@ EAppReturnType::Type UAirBlueprintLib::ShowMessage(EAppMsgType::Type message_typ
 
     return FMessageDialog::Open(message_type,
                                 FText::FromString(message.c_str()),
-                                &title_text);
+                                title_text);
 }
 
 ULineBatchComponent *GetLineBatcher(const UWorld *InWorld, bool bPersistentLines, float LifeTime, bool bDepthIsForeground)
 {
-    return (InWorld ? (bDepthIsForeground ? InWorld->ForegroundLineBatcher : ((bPersistentLines || (LifeTime > 0.f)) ? InWorld->PersistentLineBatcher : InWorld->LineBatcher)) : NULL);
+
+    if (InWorld)
+    {
+        if (bPersistentLines || LifeTime > 0.f)
+        {
+            return bDepthIsForeground ? InWorld->GetLineBatcher(UWorld::ELineBatcherType::ForegroundPersistent) : InWorld->GetLineBatcher(UWorld::ELineBatcherType::WorldPersistent);
+        }
+        else
+        {
+            return bDepthIsForeground ? InWorld->GetLineBatcher(UWorld::ELineBatcherType::Foreground) : InWorld->GetLineBatcher(UWorld::ELineBatcherType::World);
+        }
+    }
+    return nullptr;
+	//return (InWorld ? (bDepthIsForeground ? InWorld->ForegroundLineBatcher : ((bPersistentLines || (LifeTime > 0.f)) ? InWorld->PersistentLineBatcher : InWorld->LineBatcher)) : NULL);
 }
 
 static float GetLineLifeTime(ULineBatchComponent *LineBatcher, float LifeTime, bool bPersistent)
@@ -788,9 +801,9 @@ std::vector<msr::airlib::MeshPositionVertexBuffersResponse> UAirBlueprintLib::Ge
             (
                 [vertex_buffer, data](FRHICommandListImmediate &RHICmdList)
                 {
-                    FVector *indices = (FVector *)RHILockBuffer(vertex_buffer->VertexBufferRHI, 0, vertex_buffer->VertexBufferRHI->GetSize(), RLM_ReadOnly);
+                    FVector *indices = (FVector *)RHICmdList.LockBuffer(vertex_buffer->VertexBufferRHI, 0, vertex_buffer->VertexBufferRHI->GetSize(), RLM_ReadOnly);
                     memcpy(data, indices, vertex_buffer->VertexBufferRHI->GetSize());
-                    RHIUnlockBuffer(vertex_buffer->VertexBufferRHI);
+                    RHICmdList.UnlockBuffer(vertex_buffer->VertexBufferRHI);
                 });
 
 #if ((ENGINE_MAJOR_VERSION > 4) || (ENGINE_MAJOR_VERSION == 4 && ENGINE_MINOR_VERSION >= 27))
@@ -812,9 +825,9 @@ std::vector<msr::airlib::MeshPositionVertexBuffersResponse> UAirBlueprintLib::Ge
                 (
                     [IndexBuffer, data_ptr](FRHICommandListImmediate &RHICmdList)
                     {
-                        uint16_t *indices = (uint16_t *)RHILockBuffer(IndexBuffer->IndexBufferRHI, 0, IndexBuffer->IndexBufferRHI->GetSize(), RLM_ReadOnly);
+                        uint16_t *indices = (uint16_t *)RHICmdList.LockBuffer(IndexBuffer->IndexBufferRHI, 0, IndexBuffer->IndexBufferRHI->GetSize(), RLM_ReadOnly);
                         memcpy(data_ptr, indices, IndexBuffer->IndexBufferRHI->GetSize());
-                        RHIUnlockBuffer(IndexBuffer->IndexBufferRHI);
+                        RHICmdList.UnlockBuffer(IndexBuffer->IndexBufferRHI);
                     });
 
                 // Need to force the render command to go through cause on the next iteration the buffer no longer exists
@@ -838,9 +851,9 @@ std::vector<msr::airlib::MeshPositionVertexBuffersResponse> UAirBlueprintLib::Ge
                 (
                     [IndexBuffer, data_ptr](FRHICommandListImmediate &RHICmdList)
                     {
-                        uint32_t *indices = (uint32_t *)RHILockBuffer(IndexBuffer->IndexBufferRHI, 0, IndexBuffer->IndexBufferRHI->GetSize(), RLM_ReadOnly);
+                        uint32_t *indices = (uint32_t *)RHICmdList.LockBuffer(IndexBuffer->IndexBufferRHI, 0, IndexBuffer->IndexBufferRHI->GetSize(), RLM_ReadOnly);
                         memcpy(data_ptr, indices, IndexBuffer->IndexBufferRHI->GetSize());
-                        RHIUnlockBuffer(IndexBuffer->IndexBufferRHI);
+                        RHICmdList.UnlockBuffer(IndexBuffer->IndexBufferRHI);
                     });
 
                 FlushRenderingCommands();

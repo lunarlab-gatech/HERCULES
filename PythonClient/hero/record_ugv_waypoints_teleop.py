@@ -49,7 +49,9 @@ import hercules_cosysairsim as airsim
 VEHICLE_NAME      = "Husky1"
 RPC_PORT          = 41452
 
-OUTFILE_PATH      = "/home/sgarimella34/multi-robot-coordination/trajectory_data/CSLAM_random_explore/smalltown_test1/Husky1_trajectory.txt"
+# None = <repo>/trajectory_data/<VEHICLE_NAME>_trajectory.txt, where the waypoint run
+# scripts look by default. --vehicle / --out on the command line override both.
+OUTFILE_PATH      = None
 APPEND_MODE       = False
 
 # Teleop loop
@@ -407,4 +409,14 @@ def main():
 
 
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser(description="Teleop a vehicle and record its waypoint trajectory.")
+    parser.add_argument("--vehicle", default=VEHICLE_NAME, help="vehicle name (default: %(default)s)")
+    parser.add_argument("--out", default=OUTFILE_PATH,
+                        help="trajectory file (default: <repo>/trajectory_data/<vehicle>_trajectory.txt)")
+    args = parser.parse_args()
+    VEHICLE_NAME = args.vehicle
+    OUTFILE_PATH = args.out or os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "..", "..", "trajectory_data",
+        f"{VEHICLE_NAME}_trajectory.txt")
     main()

@@ -9,8 +9,14 @@
 #include "Runtime/Engine/Classes/Components/StaticMeshComponent.h"
 #include "Runtime/Engine/Public/SkeletalRenderPublic.h"
 
-#include "AnnotationComponent.generated.h"
+#if ENGINE_MAJOR_VERSION >= 5
+// different header files in UE
+#include "Runtime/Engine/Public/StaticMeshSceneProxy.h"
+#include "Runtime/Engine/Public/SkeletalMeshSceneProxy.h"
+#include "Runtime/Engine/Public/NaniteSceneProxy.h"
+#endif
 
+#include "AnnotationComponent.generated.h"
 
 // TODO: Might need to annotate every frame if there are new actors got spawned
 /** A proxy component class to render annotation color
@@ -49,6 +55,18 @@ public:
 	/** Force the component to update to capture changes from the parent */
 	void ForceUpdate();
 
+public:
+	// Simple classification for foliage-related mesh components.
+	enum class EFoliageComponentType : uint8
+	{
+		None = 0,
+		StaticFoliage,
+		SkeletalFoliage,
+		InstancedSkeletalFoliage
+	};
+
+	EFoliageComponentType GetLastDetectedFoliageType() const;
+
 private:
 	// FParentMeshInfo ParentMeshInfo;
 	// TSharedPtr<class FParentMeshInfo> ParentMeshInfo;
@@ -65,7 +83,11 @@ private:
 
 	bool bSkeletalMesh; // indicate whether this is for a SkeletalMesh
 	bool bTexture; // indicate if this is a texture annotation component
+	EFoliageComponentType last_foliage_type_;
 
+	static EFoliageComponentType ClassifyFoliageType(const USceneComponent* Component);
 	FPrimitiveSceneProxy* CreateSceneProxy(UStaticMeshComponent* StaticMeshComponent);
 	FPrimitiveSceneProxy* CreateSceneProxy(USkeletalMeshComponent* SkeletalMeshComponent);
+	FPrimitiveSceneProxy* CreateSceneProxyNaniteSkeletal(USkeletalMeshComponent* SkeletalMeshComponent);
+	FPrimitiveSceneProxy* CreateSceneProxyNaniteInstancedSkeletal(USkinnedMeshComponent* InstancedMeshComponent);
 };

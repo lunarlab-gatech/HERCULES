@@ -109,7 +109,7 @@ void RenderRequest::getScreenshot(std::shared_ptr<RenderParams> params[], std::v
         if (params[i]->render_target != nullptr && params[i]->render_component != nullptr) {
             if (!params[i]->pixels_as_float) {
                 if (results[i]->width != 0 && results[i]->height != 0) {
-                    results[i]->image_data_uint8.SetNumUninitialized(results[i]->width * results[i]->height * 3, false);
+                    results[i]->image_data_uint8.SetNumUninitialized(results[i]->width * results[i]->height * 3, EAllowShrinking::No);
                     if (params[i]->compress)
                         UAirBlueprintLib::CompressImageArray(results[i]->width, results[i]->height, results[i]->bmp, results[i]->image_data_uint8);
                     else {
@@ -157,7 +157,7 @@ void RenderRequest::ExecuteTask()
                     // path below otherwise races the render target's RHI resource lifecycle,
                     // causing an intermittent segfault in FVulkanTexture::Cast (a virtual call
                     // on a freed texture). Also skip the read if the texture isn't valid yet.
-                    FTexture2DRHIRef rhi_texture = rt_resource->GetRenderTargetTexture();
+                    FTextureRHIRef rhi_texture = rt_resource->GetRenderTargetTexture();
                     if (rhi_texture.IsValid()) {
                         FIntPoint size;
                         auto flags = setupRenderResource(rt_resource, params_[i].get(), results_[i].get(), size);

@@ -14,7 +14,9 @@ STRICT_MODE_OFF
 STRICT_MODE_ON
 
 #include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
+#include <cstdlib>
 #include <iostream>
+#include <string>
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -60,6 +62,14 @@ std::vector<Vector3r> loadWaypoints(const std::string &file_path, float fixed_z,
     return waypoints;
 }
 
+// Simulator address: HERCULES_HOST, e.g. the Windows host when the simulator runs on Windows
+// and this controller in WSL; localhost otherwise.
+static std::string simulatorHost()
+{
+    const char* host = std::getenv("HERCULES_HOST");
+    return (host != nullptr && *host != '\0') ? host : "localhost";
+}
+
 int main(int argc, char *argv[])
 {
     if (argc < 3 || argc > 7)
@@ -97,7 +107,7 @@ int main(int argc, char *argv[])
 
     try
     {
-        MultirotorRpcLibClient client("localhost", 41451, 60.0f);
+        MultirotorRpcLibClient client(simulatorHost(), 41451, 60.0f);
         client.confirmConnection();
         client.enableApiControl(true, drone_name);
         client.armDisarm(true, drone_name);

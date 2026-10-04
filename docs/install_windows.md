@@ -3,13 +3,14 @@
 ## Install Unreal Engine
 1. [Download](https://www.unrealengine.com/download) the Epic Games Launcher. While the Unreal Engine is open source and free to download, registration is still required.
 2. Run the Epic Games Launcher, open the `Unreal Engine` tab on the left pane.
-Click on the `Install` button on the top right, which should show the option to download **Unreal Engine 5.2.1**. Chose the install location to suit your needs, as shown in the images below. If you have multiple versions of Unreal installed then **make sure the version you are using is set to `current`** by clicking down arrow next to the Launch button for the version.
+Click on the `Install` button on the top right, which should show the option to download **Unreal Engine 5.8** (HERCULES is tested with 5.8.3). Chose the install location to suit your needs, as shown in the images below. If you have multiple versions of Unreal installed then **make sure the version you are using is set to `current`** by clicking down arrow next to the Launch button for the version.
 ![Unreal Engine Tab UI Screenshot](images/ue_install.png)
 ![Unreal Engine Install Location UI Screenshot](images/ue_install_location.png)
 
 ## Build HERCULES
-* Install Visual Studio 2022. Make sure to select Desktop Development with C++ and Windows 10/11 SDK **10.0.X (choose latest)** and select the latest .NET Framework SDK under the 'Individual Components' tab while installing VS 2022. More info [here](https://dev.epicgames.com/documentation/en-us/unreal-engine/setting-up-visual-studio-development-environment-for-cplusplus-projects-in-unreal-engine?application_version=5.2).
-* Start `Developer Command Prompt for VS 2022`. 
+* Install Visual Studio 2026 (or Visual Studio 2022 17.14). Make sure to select Desktop Development with C++ and Windows 10/11 SDK **10.0.X (choose latest)** and select the latest .NET Framework SDK under the 'Individual Components' tab. More info [here](https://dev.epicgames.com/documentation/en-us/unreal-engine/setting-up-visual-studio-development-environment-for-cplusplus-projects-in-unreal-engine?application_version=5.8).
+    Unreal Engine 5.8 refuses some MSVC versions, including 14.44.35207 from the first Visual Studio 2022 17.14 releases. Visual Studio 2026 with its default MSVC 14.50 or newer works; see the FAQ below to pin a toolset.
+* Start `x64 Native Tools Command Prompt for VS 2026` (or for VS 2022). 
 * Clone the repo: `git clone https://github.com/lunarlab-gatech/HERCULES.git`, and go the HERCULES directory by `cd HERCULES`. 
 * Run `build.cmd` from the command line. This will create ready to use plugin bits in the `Unreal\Plugins` folder that can be dropped into any Unreal project.
 
@@ -37,6 +38,9 @@ Once HERCULES is set up by following above steps, you can,
 See [Using APIs](apis.md) and [settings.json](settings.md) for various options available.
 
 # FAQ
+
+#### Unreal Engine says my MSVC version is not supported, or `build.cmd` uses a different MSVC than Unreal Engine
+Unreal Engine 5.8 lists preferred and banned MSVC versions in `Engine/Config/Windows/Windows_SDK.json`. Build AirLib with the same toolset Unreal Engine uses: set `AIRSIM_VCTOOLSVERSION` to that MSVC version before running `build.cmd`, for example `set AIRSIM_VCTOOLSVERSION=14.50.35717`.
 
 
 #### I get an error `Il ‘P1’, version ‘X’, does not match ‘P2’, version ‘X’`

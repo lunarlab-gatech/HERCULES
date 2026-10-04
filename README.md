@@ -12,8 +12,8 @@
 [![Project Page](https://img.shields.io/badge/Project-Page-1f8ceb.svg)](https://github.com/lunarlab-gatech/HERCULES)
 [![Video](https://img.shields.io/badge/YouTube-Demo-ff0000.svg?logo=youtube&logoColor=white)](https://www.youtube.com/watch?v=Is3MmmMx2fw)
 [![Dataset](https://img.shields.io/badge/🤗%20HuggingFace-Dataset-yellow.svg)](https://huggingface.co/datasets/GeorgiaTech/HERCULES)
-[![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.2.1-0e1128.svg?logo=unrealengine)](https://www.unrealengine.com/)
-[![ROS 2](https://img.shields.io/badge/ROS%202-Humble-22314e.svg?logo=ros)](https://docs.ros.org/en/humble/)
+[![Unreal Engine](https://img.shields.io/badge/Unreal%20Engine-5.8-0e1128.svg?logo=unrealengine)](https://www.unrealengine.com/)
+[![ROS 2](https://img.shields.io/badge/ROS%202-Jazzy%20%7C%20Lyrical-22314e.svg?logo=ros)](https://docs.ros.org/en/jazzy/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 *An open-source Unreal Engine 5 simulator for heterogeneous UAV–UGV teams in photorealistic, dynamic, large-scale environments.*
@@ -58,17 +58,17 @@ A novel autonomous waypoint-tracking UGV controller mirrors the UAV interface, e
 
 ## Getting Started
 
-HERCULES is developed and tested on **Ubuntu 22.04** with **Unreal Engine 5.2.1** and **ROS 2 Humble**. It is distributed as an Unreal plugin that drops into an Unreal environment, plus lightweight Python and ROS 2 clients.
+HERCULES was developed on **Ubuntu 22.04** with Unreal Engine 5.2.1 and now targets **Unreal Engine 5.8**; the ROS 2 wrappers target **ROS 2 Jazzy** and **ROS 2 Lyrical**. It is distributed as an Unreal plugin that drops into an Unreal environment, plus lightweight Python and ROS 2 clients.
 
 ### Requirements
 
 | Component | Version / Notes |
 |---|---|
-| OS | Ubuntu 22.04 (Linux); Windows also supported for the simulator |
-| Unreal Engine | **5.2.1** (source build recommended — [get UE from Epic](https://www.unrealengine.com/en-US/download)) |
-| Toolchain | clang-12, CMake ≥ 3.12 (installed by `setup.sh`) |
+| OS | Ubuntu 24.04 / 26.04 (Linux) or Windows 10/11 for the simulator; ROS 2 clients on Linux or WSL 2 |
+| Unreal Engine | **5.8** ([get UE from Epic](https://www.unrealengine.com/en-US/download)) |
+| Toolchain | Linux: Unreal Engine's bundled clang (`build.sh --ue-root` / `--ue-toolchain`), CMake ≥ 3.12; Windows: Visual Studio 2026 |
 | Python | 3.10 (see [`PythonClient/requirements-herculesvenv.txt`](PythonClient/requirements-herculesvenv.txt)) |
-| ROS 2 | Humble (for the ROS 2 wrappers) |
+| ROS 2 | Jazzy (Ubuntu 24.04) or Lyrical (Ubuntu 26.04), for the ROS 2 wrappers |
 
 ### 1. Clone
 
@@ -88,7 +88,7 @@ cd HERCULES
 
 ### 3. Run the simulator
 
-The build produces the `Cosys-AirSim` Unreal plugin. Drop it into an Unreal environment and open the project with **UE 5.2.1**. Two ready environments are included under [`Unreal/Environments/`](Unreal/Environments/): **`Blocks`** (minimal) and **`DynamicObjects`**. Detailed steps — including running from a packaged binary — are in the docs:
+The build produces the `Cosys-AirSim` Unreal plugin. Drop it into an Unreal environment and open the project with **UE 5.8**. Two ready environments are included under [`Unreal/Environments/`](Unreal/Environments/): **`Blocks`** (minimal) and **`DynamicObjects`**. Detailed steps — including running from a packaged binary — are in the docs:
 
 - [Install & build on Linux](docs/install_linux.md) · [on Windows](docs/install_windows.md)
 - [Run a precompiled/packaged build](docs/install_precompiled.md)
@@ -111,14 +111,17 @@ See [`PythonClient/README.md`](PythonClient/README.md) for details.
 
 ### 5. ROS 2 workspace
 
-Performance-optimized ROS 2 (Humble) wrappers live under [`ros2/`](ros2/). Build with `colcon` and see [the ROS 2 C++ docs](docs/ros_cplusplus.md):
+Performance-optimized ROS 2 (Jazzy / Lyrical) wrappers live under [`ros2/`](ros2/). Install dependencies with `rosdep`, build with `colcon`, and see [the ROS 2 C++ docs](docs/ros_cplusplus.md):
 
 ```bash
-source /opt/ros/humble/setup.bash
+source /opt/ros/jazzy/setup.bash   # or /opt/ros/lyrical/setup.bash
 cd ros2
+rosdep install --from-paths src --ignore-src -y
 colcon build
 source install/setup.bash
 ```
+
+To run drones and Huskies together in one simulation, with recorded trajectories replayed by the waypoint controllers, see [Running a UAV–UGV Team](docs/hero_team_quickstart.md).
 
 ---
 

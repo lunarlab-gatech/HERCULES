@@ -18,6 +18,8 @@ Usage:
   python3 generate_dataset.py configs/smalltown.yaml
   python3 generate_dataset.py configs/smalltown.yaml --stages labels
   python3 generate_dataset.py configs/smalltown.yaml --dry-run
+
+Relative paths in the config are relative to the HERCULES repository root.
 """
 
 import argparse
@@ -35,6 +37,7 @@ from pathlib import Path
 import yaml
 
 ALL_STAGES = ["collect", "calibrate", "post", "labels"]
+REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 def log(msg):
@@ -47,7 +50,11 @@ def die(msg):
 
 
 def expand(p):
-    return Path(os.path.expanduser(str(p))).resolve()
+    """Expand ~ and $VARS; resolve relative paths against the repository root."""
+    path = Path(os.path.expandvars(os.path.expanduser(str(p))))
+    if not path.is_absolute():
+        path = REPO_ROOT / path
+    return path.resolve()
 
 
 def tail(path, n=15):
@@ -67,10 +74,12 @@ class Pipeline:
         self.sequence = cfg["sequence"]
         self.dataset_dir = expand(cfg["output_root"]) / self.sequence
         self.log_dir = self.dataset_dir / "logs"
-        self.trajectory_dir = expand(cfg["trajectory_dir"])
+        self.trajectory_dir = expand(cfg.get("trajectory_dir", "trajectory_data"))
         self.airsim_settings = expand(cfg["airsim_settings"])
-        self.cosys_root = expand(cfg["paths"]["cosys_root"])
-        self.ue_saved_dir = expand(cfg["paths"]["ue_saved_dir"])
+        paths = cfg.get("paths") or {}
+        # The HERCULES checkout that holds PythonClient/ and build_release/.
+        self.cosys_root = expand(paths.get("cosys_root", REPO_ROOT))
+        self.ue_saved_dir = expand(paths["ue_saved_dir"]) if paths.get("ue_saved_dir") else None
 
         pc = self.cosys_root / "PythonClient"
         self.collector = pc / "hero" / "data_collection" / "hercules_multi_vehicle_data_collector.py"
@@ -165,34 +174,44 @@ class Pipeline:
 
     def preflight(self, stages):
         log(f"dataset dir: {self.dataset_dir}")
-        if self.dry:
-            return
-        if "collect" in stages or "calibrate" in stages:
-            if self.drone_names:
-                self._check_port(self.ports["drone"], "Drone")
-            if self.ugv_names:
-                self._check_port(self.ports["ugv"], "UGV")
-        if "labels" in stages:
-            # segmentation_generate_list.py connects to the multirotor client
-            self._check_port(self.ports["drone"], "AirSim (labels stage)")
+        if not self.dry:
+            if "collect" in stages or "calibrate" in stages:
+                if self.drone_names:
+                    self._check_port(self.ports["drone"], "Drone")
+                if self.ugv_names:
+                    self._check_port(self.ports["ugv"], "UGV")
+            if "labels" in stages:
+                # segmentation_generate_list.py connects to the multirotor client
+                self._check_port(self.ports["drone"], "AirSim (labels stage)")
+        problems = []
         if "collect" in stages:
             for name in self.drone_names + self.ugv_names:
                 wp = self.trajectory_dir / f"{name}_trajectory.txt"
                 if not wp.is_file():
-                    die(f"missing trajectory file: {wp}")
+                    problems.append(f"missing trajectory file: {wp}")
             if self.drone_names and not self.drone_bin.is_file():
-                die(f"missing binary: {self.drone_bin}")
+                problems.append(f"missing binary: {self.drone_bin}")
             if self.ugv_names and not self.ugv_bin.is_file():
-                die(f"missing binary: {self.ugv_bin}")
+                problems.append(f"missing binary: {self.ugv_bin}")
             veh_dirs = [d for d in (self.dataset_dir / n for n in self.drone_names + self.ugv_names)
                         if d.exists()]
             if veh_dirs:
-                die(f"dataset already contains vehicle data ({veh_dirs[0]} ...). "
-                    "Move it away or change 'sequence' in the config.")
+                problems.append(f"dataset already contains vehicle data ({veh_dirs[0]} ...). "
+                                "Move it away or change 'sequence' in the config.")
         if "post" in stages and not self.airsim_settings.is_file():
-            die(f"missing AirSim settings: {self.airsim_settings}")
-        if "labels" in stages and not self.ue_saved_dir.is_dir():
-            die(f"UE project Saved dir not found: {self.ue_saved_dir}")
+            problems.append(f"missing AirSim settings: {self.airsim_settings}")
+        if "labels" in stages:
+            if self.ue_saved_dir is None:
+                problems.append("set paths.ue_saved_dir to the UE project's Saved folder "
+                                "for the labels stage")
+            elif not self.ue_saved_dir.is_dir():
+                problems.append(f"UE project Saved dir not found: {self.ue_saved_dir}")
+        if self.dry:
+            for problem in problems:
+                log(f"DRY-RUN preflight would stop: {problem}")
+            return
+        if problems:
+            die(problems[0])
         self.dataset_dir.mkdir(parents=True, exist_ok=True)
         self.log_dir.mkdir(parents=True, exist_ok=True)
         log("preflight OK")
@@ -344,11 +363,11 @@ class Pipeline:
 
         # 2) UE actor Label->Name dump via the init_unreal.py file-watcher
         labels_csv = self.dataset_dir / f"ue_actor_label_to_name_{env_tag}.csv"
-        request = self.ue_saved_dir / "label_dump_request.json"
-        result = self.ue_saved_dir / "label_dump_result.json"
         if self.dry:
             log(f"DRY-RUN would request UE label dump -> {labels_csv}")
         else:
+            request = self.ue_saved_dir / "label_dump_request.json"
+            result = self.ue_saved_dir / "label_dump_result.json"
             result.unlink(missing_ok=True)
             request.write_text(json.dumps({"out_csv": str(labels_csv)}))
             timeout = self.labels_cfg.get("dump_timeout_s", 60)

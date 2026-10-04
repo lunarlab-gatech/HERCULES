@@ -1,0 +1,66 @@
+# End-to-end dataset generation config for the Hero-mode UAV-UGV team in Blocks
+# (docs/hero_team_quickstart.md): Drone1, Drone2, Husky1, Husky2.
+# Usage, with the editor playing and one trajectory per vehicle in trajectory_dir:
+#   python3 dataset_pipeline/generate_dataset.py dataset_pipeline/configs/blocks_team.yaml
+#
+# Copy this file per sequence and change `sequence` / `trajectory_dir`.
+# Relative paths are relative to the HERCULES repository root; ~ and $VARS expand.
+
+environment: blocks
+sequence: blocks_team_01               # dataset folder name under output_root
+output_root: ~/hercules_datasets
+trajectory_dir: trajectory_data        # <Vehicle>_trajectory.txt from the recorders or the planner
+airsim_settings: ros2/settings/hero_blocks_team.json
+
+drones:
+  - name: Drone1
+    velocity: 0.75                     # m/s, matches run_drones_waypoints.sh
+    altitude: -4.0                     # NED z
+    use_waypoint_z: false              # true flies each waypoint's own altitude (planner output)
+    no_return_home: true
+  - name: Drone2
+    velocity: 0.75
+    altitude: -4.0
+    use_waypoint_z: false
+    no_return_home: true
+
+ugvs:
+  - name: Husky1
+    speed: 0.29                        # m/s; keep 0.29-0.35 for simpause-stepped physics
+    ctrl_hz: 20
+  - name: Husky2
+    speed: 0.29
+    ctrl_hz: 20
+
+ports:
+  drone: 41451
+  ugv: 41452
+
+collection:
+  duration: 1300                       # sim seconds; must cover the full replay
+  imu_rate: 200
+  odom_hz: 20
+  cam_hz: 20
+  lidar_hz: 20
+  camera: front_center
+  stereo_cameras: [stereo_left, stereo_right]
+  lidar: LidarSensor1
+  save_depth_png: false
+  warmup_s: 5                          # wall seconds before launching replay controllers
+  post_replay_grace_s: 10              # wall seconds of extra recording after replay ends
+
+calibration:
+  enabled: true                        # runs AFTER the main collection
+  duration: 300                        # sim seconds budget for the calibration recording
+  grace_s: 5
+
+post:
+  imu_rates: [200, 500]                # synthetic_imu_<rate>Hz_9axis.txt per vehicle
+
+labels:
+  tag: blocks                          # suffix for ue_actor_label_to_name_<tag>.csv etc.
+  dump_timeout_s: 60
+
+paths:
+  # The labels stage needs dataset_pipeline/ue/init_unreal.py in the project's Content/Python/.
+  ue_saved_dir: Unreal/Environments/Blocks/Saved

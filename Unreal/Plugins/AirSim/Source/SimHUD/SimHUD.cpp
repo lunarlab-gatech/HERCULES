@@ -184,7 +184,7 @@ void ASimHUD::createMainWidget()
     if (widget_class_ != nullptr)
     {
         APlayerController *player_controller = this->GetWorld()->GetFirstPlayerController();
-        auto *pawn = player_controller->GetPawn();
+        APawn* pawn = player_controller->GetPawn();
         if (pawn)
         {
             std::string pawn_name = std::string(TCHAR_TO_ANSI(*pawn->GetName()));
