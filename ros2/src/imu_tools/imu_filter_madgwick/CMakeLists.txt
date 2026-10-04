@@ -10,6 +10,7 @@ find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(message_filters REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(sensor_msgs REQUIRED)
@@ -22,15 +23,22 @@ target_compile_features(imu_filter_madgwick PUBLIC c_std_99 cxx_std_17)  # Requi
 target_include_directories(imu_filter_madgwick PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-ament_target_dependencies(imu_filter_madgwick
-  geometry_msgs
-  rclcpp
-  rclcpp_components
-  sensor_msgs
-  std_msgs
-  tf2_geometry_msgs
-  tf2_ros
+target_link_libraries(imu_filter_madgwick PUBLIC
+  ${geometry_msgs_TARGETS}
+  ${sensor_msgs_TARGETS}
+  ${std_msgs_TARGETS}
+  rclcpp::rclcpp
+  rclcpp_components::component
+  rclcpp_components::component_manager
+  sensor_msgs::sensor_msgs_library
+  tf2_geometry_msgs::tf2_geometry_msgs
+  tf2_ros::tf2_ros
 )
+if(message_filters_VERSION VERSION_LESS 5.0.0)
+  # Jazzy and older
+  target_compile_definitions(imu_filter_madgwick
+    PRIVATE USE_OLD_RMW_QOS_MESSAGE_FILTERS=1)
+endif()
 rclcpp_components_register_nodes(imu_filter_madgwick "ImuFilterMadgwickRos")
 target_compile_definitions(imu_filter_madgwick
   PRIVATE "IMU_FILTER_MADGWICK_CPP_BUILDING_DLL")

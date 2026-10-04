@@ -1,0 +1,199 @@
+Panels:
+- Class: rviz_common/Displays
+  Name: Displays
+  Property Tree Widget:
+    Expanded:
+    - /Global Options1
+    - /UAV Odometry1
+    - /LiDAR1
+    Splitter Ratio: 0.5
+- Class: rviz_common/Views
+  Name: Views
+Visualization Manager:
+  Class: ''
+  Displays:
+  - Class: rviz_default_plugins/Grid
+    Name: Grid
+    Enabled: true
+    Value: true
+    Alpha: 0.5
+    Cell Size: 1
+    Color: 130; 140; 155
+    Line Style:
+      Value: Lines
+      Line Width: 0.03
+    Normal Cell Count: 0
+    Plane: XY
+    Plane Cell Count: 40
+    Reference Frame: <Fixed Frame>
+    Offset:
+      X: 0
+      Y: 0
+      Z: 0
+  - Class: rviz_default_plugins/TF
+    Name: Vehicle Frames
+    Enabled: true
+    Value: true
+    Frame Timeout: 15
+    Frames:
+      All Enabled: true
+    Marker Scale: 0.5
+    Show Arrows: true
+    Show Axes: true
+    Show Names: true
+    Update Interval: 0
+  - Class: rviz_default_plugins/Odometry
+    Name: UAV Odometry
+    Enabled: true
+    Value: true
+    Angle Tolerance: 0.05
+    Position Tolerance: 0.1
+    Keep: 200
+    Covariance:
+      Value: false
+    Shape:
+      Value: Arrow
+      Alpha: 1
+      Color: 255; 160; 40
+      Head Length: 0.4
+      Head Radius: 0.15
+      Shaft Length: 0.8
+      Shaft Radius: 0.06
+    Topic:
+      Value: /airsim_node/SimpleFlight/odom_local
+      Depth: 10
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Reliability Policy: Reliable
+      Filter size: 20
+  - Class: rviz_default_plugins/PointCloud2
+    Name: LiDAR
+    Enabled: true
+    Value: true
+    Alpha: 1
+    Position Transformer: XYZ
+    Color Transformer: AxisColor
+    Axis: Z
+    Autocompute Value Bounds:
+      Value: true
+    Use rainbow: true
+    Style: Points
+    Size (Pixels): 3
+    Size (m): 0.03
+    Decay Time: 0.2
+    Selectable: true
+    Use Fixed Frame: true
+    Topic:
+      Value: /airsim_node/SimpleFlight/lidar/points/lidar
+      Depth: 5
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Reliability Policy: Best Effort
+      Filter size: 20
+  - Class: rviz_imu_plugin/Imu
+    Name: IMU
+    Enabled: true
+    Value: true
+    fixed_frame_orientation: true
+    Box properties:
+      Enable box: false
+    Axes properties:
+      Enable axes: true
+      Axes scale: 0.7
+    Acceleration properties:
+      Enable acceleration: true
+      Derotate acceleration: true
+      Acc. vector scale: 0.1
+    Topic:
+      Value: /airsim_node/SimpleFlight/imu/imu
+      Depth: 10
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Reliability Policy: Best Effort
+      Filter size: 20
+  - Class: rviz_default_plugins/Image
+    Name: Front RGB
+    Enabled: true
+    Value: true
+    Normalize Range: true
+    Topic:
+      Value: /airsim_node/SimpleFlight/front_center_Scene/image
+      Depth: 2
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Reliability Policy: Best Effort
+  - Class: rviz_default_plugins/Image
+    Name: Front Depth
+    Enabled: true
+    Value: true
+    Normalize Range: false
+    Min Value: 0
+    Max Value: 50
+    Median window: 5
+    Topic:
+      Value: /airsim_node/SimpleFlight/front_center_DepthPlanar/image
+      Depth: 2
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Reliability Policy: Best Effort
+  - Class: rviz_default_plugins/Image
+    Name: Left RGB
+    Enabled: false
+    Value: false
+    Topic:
+      Value: /airsim_node/SimpleFlight/front_left_Scene/image
+      Depth: 2
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Reliability Policy: Best Effort
+  - Class: rviz_default_plugins/Image
+    Name: Right RGB
+    Enabled: false
+    Value: false
+    Topic:
+      Value: /airsim_node/SimpleFlight/front_right_Scene/image
+      Depth: 2
+      Durability Policy: Volatile
+      History Policy: Keep Last
+      Reliability Policy: Best Effort
+  Enabled: true
+  Global Options:
+    Background Color: 32; 38; 48
+    Fixed Frame: world
+    Frame Rate: 30
+  Name: root
+  Tools:
+  - Class: rviz_default_plugins/Interact
+    Hide Inactive Objects: true
+  - Class: rviz_default_plugins/MoveCamera
+  - Class: rviz_default_plugins/Select
+  - Class: rviz_default_plugins/FocusCamera
+  - Class: rviz_default_plugins/Measure
+  Transformation:
+    Current:
+      Class: rviz_default_plugins/TF
+  Value: true
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Name: Current View
+      Target Frame: SimpleFlight/odom_local
+      Distance: 12
+      Pitch: 0.65
+      Yaw: 0.8
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0
+      Near Clip Distance: 0.01
+      Invert Z Axis: false
+      Value: Orbit (rviz_default_plugins)
+    Saved: null
+Window Geometry:
+  Width: 1280
+  Height: 800
+  X: 80
+  Y: 80
+  Hide Left Dock: false
+  Hide Right Dock: false
+  QMainWindow State: 000000ff00000000fd00000002000000000000014a00000384fc0200000001fc0000000000000384000000320100001dfa000000000200000002fb000000100044006900730070006c0061007900730100000000ffffffff0000001400fffffffb0000000a005600690065007700730100000000ffffffff0000001400ffffff00000001000001a400000384fc0200000002fb0000001200460072006f006e007400200052004700420100000000000001bf0000001400fffffffb0000001600460072006f006e007400200044006500700074006801000001c5000001bf0000001400ffffff000002a60000038400000004000000040000000800000008fc00000000

@@ -13,20 +13,38 @@ segmentation label maps).
    editor startup; it powers the actor-label dump in the `labels` stage).
    A versioned copy lives in `dataset_pipeline/ue/init_unreal.py` — copy it
    into `<UE project>/Content/Python/` for any new environment (it is already
-   installed in the SmallTown project).
+   installed in the SmallTown project). The project needs the **Python Editor
+   Script Plugin** enabled (Edit → Plugins); without it, leave out the `labels`
+   stage.
 4. C++ waypoint controllers built: `build_release/output/bin/{Drone,UGV}WaypointControl`.
+5. Python packages for the pipeline's scripts: `numpy`, `scipy`,
+   `opencv-python`, `pillow`, `pyyaml` and `rpc-msgpack`.
+
+## Configs
+
+| Config | Environment |
+|--------|-------------|
+| `configs/blocks_team.yaml` | Blocks with the Hero-mode team of [Running a UAV–UGV Team](../docs/hero_team_quickstart.md): `Drone1`, `Drone2`, `Husky1`, `Husky2` |
+| `configs/smalltown.yaml` | SmallTown with `Drone1` and `Husky1` |
+
+Relative paths in a config are relative to the HERCULES repository root, and
+`~` and `$VARS` are expanded. Datasets go to `~/hercules_datasets/<sequence>`
+and trajectories are read from `trajectory_data/`, where the recorders and the
+trajectory planner write them. `paths.cosys_root` defaults to this repository.
 
 ## Run
 
+From the repository root, with the editor playing:
+
 ```bash
-cd ~/multi-robot-coordination/Cosys-AirSim/dataset_pipeline
-python3 generate_dataset.py configs/smalltown.yaml
+python3 dataset_pipeline/generate_dataset.py dataset_pipeline/configs/blocks_team.yaml
 ```
 
 Useful variants:
 
 ```bash
-python3 generate_dataset.py configs/smalltown.yaml --dry-run          # print commands only
+cd dataset_pipeline
+python3 generate_dataset.py configs/smalltown.yaml --dry-run          # check paths, print commands only
 python3 generate_dataset.py configs/smalltown.yaml --stages labels    # just label maps
 python3 generate_dataset.py configs/smalltown.yaml --stages post,labels
 ```

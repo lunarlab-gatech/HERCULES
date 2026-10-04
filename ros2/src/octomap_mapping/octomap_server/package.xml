@@ -15,7 +15,7 @@
 
   <buildtool_depend>ament_cmake_auto</buildtool_depend>
   
-  <depend>nlohmann_json</depend>
+  <depend>nlohmann-json-dev</depend>
   <depend>geometry_msgs</depend>
   <depend>liboctomap-dev</depend>
   <depend>libpcl-all-dev</depend>
@@ -35,6 +35,12 @@
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_ros</depend>
   <depend>visualization_msgs</depend>
+
+  <!-- scripts/publish_saved_ogm.py -->
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-opencv</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

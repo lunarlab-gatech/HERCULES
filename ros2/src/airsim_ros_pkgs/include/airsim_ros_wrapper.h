@@ -39,7 +39,7 @@ STRICT_MODE_OFF //todo what does this do?
 #include <airsim_interfaces/msg/string_array.hpp>
 #include <airsim_interfaces/msg/environment.hpp>
 #include <chrono>
-#include <cv_bridge/cv_bridge.h>
+#include <cv_bridge/cv_bridge.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <geometry_msgs/msg/twist.hpp>
@@ -66,14 +66,14 @@ STRICT_MODE_OFF //todo what does this do?
 #include <sensor_msgs/msg/range.hpp>
 #include <rosgraph_msgs/msg/clock.hpp>
 #include <std_srvs/srv/empty.hpp>
-#include <tf2/LinearMath/Matrix3x3.h>
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/static_transform_broadcaster.h>
-#include <tf2_ros/transform_broadcaster.h>
-#include <tf2_ros/transform_listener.h>
-#include <tf2/convert.h>
+#include <tf2/LinearMath/Matrix3x3.hpp>
+#include <tf2/LinearMath/Quaternion.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2_ros/buffer.hpp>
+#include <tf2_ros/static_transform_broadcaster.hpp>
+#include <tf2_ros/transform_broadcaster.hpp>
+#include <tf2_ros/transform_listener.hpp>
+#include <tf2/convert.hpp>
 #include <unordered_map>
 #include <memory>
 
@@ -226,7 +226,7 @@ private:
         rclcpp::Publisher<airsim_interfaces::msg::CarState>::SharedPtr car_state_pub_;
         airsim_interfaces::msg::CarState car_state_msg_;
 
-        bool has_car_cmd_;
+        bool has_car_cmd_ = false;
         msr::airlib::CarApiBase::CarControls car_cmd_;
     };
 
@@ -251,7 +251,7 @@ private:
         rclcpp::Service<airsim_interfaces::srv::Takeoff>::SharedPtr takeoff_srvr_;
         rclcpp::Service<airsim_interfaces::srv::Land>::SharedPtr land_srvr_;
 
-        bool has_vel_cmd_;
+        bool has_vel_cmd_ = false;
         VelCmd vel_cmd_;
     };
 
@@ -408,14 +408,19 @@ private:
     std::shared_ptr<rclcpp::Node> nh_gpulidar_;
     std::shared_ptr<rclcpp::Node> nh_echo_;
     std::shared_ptr<rclcpp::CallbackGroup> cb_;
+    std::shared_ptr<rclcpp::CallbackGroup> image_callback_group_;
+    std::shared_ptr<rclcpp::CallbackGroup> lidar_callback_group_;
+    std::shared_ptr<rclcpp::CallbackGroup> gpulidar_callback_group_;
+    std::shared_ptr<rclcpp::CallbackGroup> echo_callback_group_;
 
     // todo not sure if async spinners should be inside this class, or should be instantiated in airsim_node.cpp, and cb queues should be public
     // todo for multiple drones with multiple sensors, this won't scale. make it a part of VehicleROS?
 
     std::mutex control_mutex_;
+    std::mutex vehicle_state_mutex_;
 
     // gimbal control
-    bool has_gimbal_cmd_;
+    bool has_gimbal_cmd_ = false;
     GimbalCmd gimbal_cmd_;
 
     /// ROS tf

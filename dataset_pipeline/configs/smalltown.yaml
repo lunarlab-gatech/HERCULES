@@ -2,11 +2,12 @@
 # Usage: python3 generate_dataset.py configs/smalltown.yaml
 #
 # Copy this file per sequence and change `sequence` / `trajectory_dir`.
+# Relative paths are relative to the HERCULES repository root; ~ and $VARS expand.
 
 environment: smalltown
 sequence: smalltown_test2              # dataset folder name under output_root
-output_root: /media/sgarimella34/T74/Hercules_Datasets/raw_data_hercules
-trajectory_dir: ~/multi-robot-coordination/trajectory_data/CSLAM_random_explore/smalltown_test1
+output_root: ~/hercules_datasets
+trajectory_dir: trajectory_data
 airsim_settings: ~/Documents/AirSim/settings.json
 
 drones:
@@ -51,5 +52,5 @@ labels:
   dump_timeout_s: 60
 
 paths:
-  cosys_root: ~/multi-robot-coordination/Cosys-AirSim
+  # cosys_root: HERCULES checkout with PythonClient/ and build_release/ (default: this repository)
   ue_saved_dir: "~/Documents/Unreal Projects/SmallTown/Saved"

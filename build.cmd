@@ -149,8 +149,9 @@ IF NOT EXIST Unreal\Plugins\AirSim\Content\VehicleAdv\SUV\v1.2.0 (
             %powershell% -command "iwr https://github.com/Cosys-Lab/Cosys-AirSim/releases/download/carassets/cosys_car_assets.zip -OutFile suv_download_tmp\car_assets.zip"
         )
         @echo off
-        rmdir /S /Q Unreal\Plugins\AirSim\Content\VehicleAdv\SUV
-        %powershell% -command "Expand-Archive -Path suv_download_tmp\car_assets.zip -DestinationPath Unreal\Plugins\AirSim\Content\VehicleAdv"
+        REM //Overwrite in place instead of deleting SUV\ first: HERCULES keeps its UGV/Husky
+        REM //assets (UGVPawn, UGVWheel*, CPHuskyMountedBar) in the same folder.
+        %powershell% -command "Expand-Archive -Force -Path suv_download_tmp\car_assets.zip -DestinationPath Unreal\Plugins\AirSim\Content\VehicleAdv"
         rmdir suv_download_tmp /q /s
         
         REM //Don't fail the build if the high-poly car is unable to be downloaded

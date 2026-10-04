@@ -17,7 +17,9 @@ STRICT_MODE_ON
 #include "vehicles/car/api/CarRpcLibClient.hpp"
 #include "common/Common.hpp"
 
+#include <cstdlib>
 #include <iostream>
+#include <string>
 #include <fstream>
 #include <sstream>
 #include <vector>
@@ -63,6 +65,14 @@ std::vector<Vector3r> loadWaypoints(const string &file_path, float fixed_z)
     return waypoints;
 }
 
+// Simulator address: HERCULES_HOST, e.g. the Windows host when the simulator runs on Windows
+// and this controller in WSL; localhost otherwise.
+static std::string simulatorHost()
+{
+    const char* host = std::getenv("HERCULES_HOST");
+    return (host != nullptr && *host != '\0') ? host : "localhost";
+}
+
 int main(int argc, char *argv[])
 {
     // Accept 3 or 4 args: name, speed, file, [control loop Hz]
@@ -106,7 +116,7 @@ int main(int argc, char *argv[])
          << " waypoints." << endl;
 
     // Create and configure client
-    CarRpcLibClient client("127.0.0.1", 41452, 60); // adjust IP/port/timeout if needed
+    CarRpcLibClient client(simulatorHost(), 41452, 60);
     client.confirmConnection();
     client.enableApiControl(true, ugv_name);
 

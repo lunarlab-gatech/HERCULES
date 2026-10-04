@@ -2,7 +2,22 @@
 Changelog for package imu_complementary_filter
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-2.1.5 (2024-10-01)
+2.2.2 (2026-01-13)
+------------------
+* Fixed a static library linking issue with the imu_complementary_filter package on Windows. (`#218 <https://github.com/CCNYRoboticsLab/imu_tools/issues/218>`_)
+* Merge pull request `#202 <https://github.com/CCNYRoboticsLab/imu_tools/issues/202>`_ from enwaytech:sr/reverse-backport-from-noetic  (`#202 <https://github.com/CCNYRoboticsLab/imu_tools/issues/202>`_)
+* Added ability to reset IMU filters when ROS time jumps back (`#165 <https://github.com/CCNYRoboticsLab/imu_tools/issues/165>`_)
+* Update deprecated TransformBroadcaster constructor (`#223 <https://github.com/CCNYRoboticsLab/imu_tools/issues/223>`_)
+* Update deprecated message filters and tf2 headers (`#222 <https://github.com/CCNYRoboticsLab/imu_tools/issues/222>`_)
+* Contributors: Alejandro Hernández Cordero, Martin Günther, Sharmin Ramli, wentywenty
+
+2.2.1 (2025-05-15)
+------------------
+* Fix deprecated header includes (`#216 <https://github.com/CCNYRoboticsLab/imu_tools/issues/216>`_)
+* [kilted] Update deprecated call to ament_target_dependencies (`#215 <https://github.com/CCNYRoboticsLab/imu_tools/issues/215>`_)
+* Contributors: David V. Lu!!, Martin Günther
+
+2.2.0 (2024-10-01)
 ------------------
 * Add QoS overriding options (`#207 <https://github.com/CCNYRoboticsLab/imu_tools/issues/207>`_)
 * Contributors: Aleksander Szymański

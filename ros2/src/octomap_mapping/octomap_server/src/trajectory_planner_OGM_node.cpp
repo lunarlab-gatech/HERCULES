@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <functional>
 #include <utility>
+#include <filesystem>
 #include <fstream>
 #include <string>
 #include <iostream>
@@ -74,6 +75,14 @@ public:
         this->declare_parameter("use_k_rrt_for_checkpoints", false);
 
         this->declare_parameter<int>("planning_horizon_steps", 50);
+        // FlightPattern for drones whose settings entry has none: "RandomExplore" or "Convoy".
+        this->declare_parameter("default_flight_pattern", "RandomExplore");
+        // Save each trajectory relative to its vehicle's settings X/Y. AirSim reports and
+        // commands vehicle positions relative to each vehicle's spawn point, so set this when
+        // the files are replayed by the waypoint controllers.
+        this->declare_parameter("trajectories_relative_to_start", false);
+        // Shut down once every trajectory is saved, instead of spinning until interrupted.
+        this->declare_parameter("exit_when_done", false);
 
         // Retrieve parameters.
         this->get_parameter("use_k_rrt_for_checkpoints", use_k_rrt_for_checkpoints_);
@@ -103,6 +112,9 @@ public:
 
         planning_horizon_steps_ =
             this->get_parameter("planning_horizon_steps").as_int();
+        this->get_parameter("default_flight_pattern", default_flight_pattern_);
+        this->get_parameter("trajectories_relative_to_start", trajectories_relative_to_start_);
+        this->get_parameter("exit_when_done", exit_when_done_);
 
         // Declare and assign default value
         output_folder_string_ = this->declare_parameter<std::string>(
@@ -197,7 +209,7 @@ public:
                     }
                     else
                     {
-                        info.flight_pattern = "RandomExplore";
+                        info.flight_pattern = default_flight_pattern_;
                     }
                     vehicles_.push_back(info);
                 }
@@ -298,6 +310,9 @@ private:
     double grid_origin_x_, grid_origin_y_;
     int grid_width_, grid_height_;
     double trajectory_exploration_radius_;
+    std::string default_flight_pattern_ = "RandomExplore";
+    bool trajectories_relative_to_start_ = false;
+    bool exit_when_done_ = false;
     double inflation_radius_;
     double ugv_inflation_radius_, uav_inflation_radius_;
     double uav_astar_inflation_radius_;
@@ -1121,9 +1136,19 @@ private:
             }
 
             TrajVec dense_rand, sparse_rand;
+            if (!reached && tree.size() > 1)
+            {
+                // Keep the longest branch rather than nothing.
+                goal_index = static_cast<int>(std::max_element(tree.begin(), tree.end(), [](const Node &a, const Node &b)
+                                                               { return a.cost < b.cost; }) -
+                                              tree.begin());
+                RCLCPP_WARN(this->get_logger(), "Kinodynamic RRT reached %.1f of %.1f m after %d iterations; using that branch",
+                            tree[goal_index].cost, remaining_length, max_iterations);
+                reached = true;
+            }
             if (!reached)
             {
-                RCLCPP_ERROR(this->get_logger(), "Kinodynamic RRT failed after %d iterations", max_iterations);
+                RCLCPP_WARN(this->get_logger(), "Kinodynamic RRT found no free step from (%.1f, %.1f)", curr_x, curr_y);
                 dense_rand.push_back(std::make_tuple(curr_x, curr_y, start_z_, curr_time));
                 sparse_rand.push_back(std::make_tuple(curr_x, curr_y, start_z_, curr_time));
                 return std::make_pair(dense_rand, sparse_rand);
@@ -1239,12 +1264,58 @@ private:
             double dy = std::get<1>(sparse_full_traj[i]) - std::get<1>(sparse_full_traj[i - 1]);
             total_length += std::sqrt(dx * dx + dy * dy);
         }
-        if (total_length < trajectory_length_)
+        // An RRT branch seldom gets much longer than the planning area is wide, so cover the
+        // remaining length with a chain of segments of at most half the area's side.
+        const double max_segment_length = std::max(square_size_ / 2.0, 1.0);
+        struct SegmentStart
         {
-            double remaining_length = trajectory_length_ - total_length;
+            size_t dense_size, sparse_size;
+            double length, x, y, time, theta;
+        };
+        std::vector<SegmentStart> segment_starts;
+        int dead_end_retries = 5;
+        while (total_length < trajectory_length_ - 1.0)
+        {
+            double remaining_length = std::min(trajectory_length_ - total_length, max_segment_length);
             auto extra_seg = plan_random_segment(remaining_length);
+            if (extra_seg.second.size() < 2)
+            {
+                // Dead end: the turn limit allows no free step from here. Plan the previous
+                // segment again, which most likely ends elsewhere.
+                if (segment_starts.empty() || dead_end_retries-- <= 0)
+                {
+                    RCLCPP_ERROR(this->get_logger(), "%s: stuck after %.1f of %.1f m; its trajectory ends there",
+                                 robot_name_.c_str(), total_length, trajectory_length_);
+                    break;
+                }
+                const SegmentStart previous = segment_starts.back();
+                segment_starts.pop_back();
+                RCLCPP_WARN(this->get_logger(), "Dead end at (%.1f, %.1f); planning the previous segment again", curr_x, curr_y);
+                dense_full_traj.resize(previous.dense_size);
+                sparse_full_traj.resize(previous.sparse_size);
+                total_length = previous.length;
+                curr_x = previous.x;
+                curr_y = previous.y;
+                curr_time = previous.time;
+                curr_theta = previous.theta;
+                continue;
+            }
+            segment_starts.push_back({dense_full_traj.size(), sparse_full_traj.size(), total_length, curr_x, curr_y, curr_time, curr_theta});
             dense_full_traj.insert(dense_full_traj.end(), extra_seg.first.begin() + 1, extra_seg.first.end());
             sparse_full_traj.insert(sparse_full_traj.end(), extra_seg.second.begin() + 1, extra_seg.second.end());
+            for (size_t i = 1; i < extra_seg.second.size(); i++)
+            {
+                total_length += std::hypot(std::get<0>(extra_seg.second[i]) - std::get<0>(extra_seg.second[i - 1]),
+                                           std::get<1>(extra_seg.second[i]) - std::get<1>(extra_seg.second[i - 1]));
+            }
+            // Continue from the segment's end, steering the next one towards unexplored cells.
+            const auto &last = extra_seg.second.back();
+            const auto &before_last = extra_seg.second[extra_seg.second.size() - 2];
+            curr_x = std::get<0>(last);
+            curr_y = std::get<1>(last);
+            curr_time = std::get<3>(last);
+            curr_theta = std::atan2(curr_y - std::get<1>(before_last), curr_x - std::get<0>(before_last));
+            update_dynamic_occupancy_grid(extra_seg.first, dynamic_occupancy_grid_);
         }
 
         // -------------------- Apply planning horizon in discrete steps (if enabled) --------------------
@@ -1585,18 +1656,23 @@ private:
     // -------------------- Trajectory File Saving --------------------
     void save_trajectory_to_file(const std::vector<std::tuple<double, double, double, double>> &traj)
     {
+        std::error_code mkdir_error;
+        std::filesystem::create_directories(std::filesystem::path(output_file_path_).parent_path(), mkdir_error);
         std::ofstream ofs(output_file_path_);
         if (!ofs.is_open())
         {
             RCLCPP_ERROR(this->get_logger(), "Unable to open file %s for writing", output_file_path_.c_str());
             return;
         }
+        // start_x_/start_y_ hold the vehicle being saved; they are in the same swapped frame.
+        const double off_x = trajectories_relative_to_start_ ? start_x_ : 0.0;
+        const double off_y = trajectories_relative_to_start_ ? start_y_ : 0.0;
         for (const auto &pt : traj)
         {
-            ofs << std::get<1>(pt) << " "   // Y first
-                << std::get<0>(pt) << " "   // X second
-                << std::get<2>(pt) << " "   // Z remains
-                << std::get<3>(pt) << "\n"; // Timestamp
+            ofs << std::get<1>(pt) - off_y << " " // Y first
+                << std::get<0>(pt) - off_x << " " // X second
+                << std::get<2>(pt) << " "         // Z remains
+                << std::get<3>(pt) << "\n";       // Timestamp
         }
         ofs.close();
         RCLCPP_INFO(this->get_logger(), "Trajectory saved to %s", output_file_path_.c_str());
@@ -1978,6 +2054,9 @@ private:
             RCLCPP_WARN(this->get_logger(), "Ground occupancy grid not received yet; cannot plan UGV trajectories.");
             return;
         }
+        // The map callbacks centre the planning area on the received map; sample within it.
+        x_dist_ = std::uniform_real_distribution<double>(grid_origin_x_, grid_origin_x_ + square_size_);
+        y_dist_ = std::uniform_real_distribution<double>(grid_origin_y_, grid_origin_y_ + square_size_);
 
         // Copy the ground occupancy grid into the UGV dynamic grid.
         dynamic_ground_grid_ = occupancy_grid_ground_;
@@ -2175,10 +2254,23 @@ private:
             RCLCPP_WARN(this->get_logger(), "Ground occupancy grid not received; skipping planning.");
             return;
         }
+        // Planning runs once, so wait for the drone map too rather than skipping the drones.
+        const bool has_drones = std::any_of(vehicles_.begin(), vehicles_.end(),
+                                            [this](const VehicleInfo &v) { return isDrone(v); });
+        if (has_drones && !occupancy_grid_received_drone_)
+        {
+            RCLCPP_WARN(this->get_logger(), "Drone occupancy grid not received; waiting before planning.");
+            return;
+        }
         // Plan both UGV and (if available) drone trajectories sequentially.
         plan_all_trajectories();
         // Optionally cancel timer if planning only once.
         timer_->cancel();
+        if (exit_when_done_)
+        {
+            RCLCPP_INFO(this->get_logger(), "Planning finished; exiting.");
+            rclcpp::shutdown();
+        }
     }
 };
 

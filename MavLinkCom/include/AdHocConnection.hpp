@@ -1,6 +1,7 @@
 #ifndef MavLinkCom_AdHocConnection_hpp
 #define MavLinkCom_AdHocConnection_hpp
 
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>

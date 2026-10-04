@@ -14,10 +14,13 @@ import pprint
 {
     "SettingsVersion": 1.2,
     "SimMode": "Hero",
+    "PawnPaths": {
+        "UGVPawn": {"PawnBP": "Class'/AirSim/VehicleAdv/SUV/UGVPawn.UGVPawn_C'"}
+    },
 
     "Vehicles": {
         "Husky1": {
-          "VehicleType": "CPHusky",
+          "VehicleType": "PhysXCar", "PawnPath": "UGVPawn",
           "X": 0, "Y": 0, "Z": -2
         },
         "Drone1": {

@@ -5,7 +5,7 @@ set(CMAKE_BUILD_TYPE Debug)
 
 
 if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 14)
+  set(CMAKE_CXX_STANDARD 17)
   set(CMAKE_CXX_STANDARD_REQUIRED ON)
   set(CMAKE_CXX_EXTENSIONS OFF)
 endif()
@@ -22,7 +22,7 @@ find_package(PCL REQUIRED)
 include_directories(${PCL_INCLUDE_DIRS})
 
 find_package(ament_cmake_auto REQUIRED)
-ament_auto_find_build_dependencies()
+ament_auto_find_build_dependencies(REQUIRED octomap_msgs)
 find_package(OCTOMAP REQUIRED)
 
 ament_auto_add_library(octomap_server_static SHARED
@@ -52,6 +52,14 @@ target_link_libraries(octomap_server
   ${OCTOMAP_LIBRARIES}
   ${PCL_LIBRARIES}
 )
+
+if(message_filters_VERSION VERSION_LESS 5.0.0)
+  # Jazzy and older
+  target_compile_definitions(octomap_server
+    PUBLIC
+      USE_OLD_RMW_QOS_MESSAGE_FILTERS=1
+  )
+endif()
 
 rclcpp_components_register_node(octomap_server
   PLUGIN "octomap_server::OctomapServer"

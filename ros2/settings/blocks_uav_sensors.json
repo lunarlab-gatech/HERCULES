@@ -1,0 +1,128 @@
+{
+  "SettingsVersion": 2.0,
+  "SimMode": "Multirotor",
+  "RpcEnabled": true,
+  "LocalHostIp": "127.0.0.1",
+  "ApiServerPort": 41451,
+  "Vehicles": {
+    "SimpleFlight": {
+      "VehicleType": "SimpleFlight",
+      "AutoCreate": true,
+      "Cameras": {
+        "front_center": {
+          "X": 0.5,
+          "Y": 0.0,
+          "Z": -0.1,
+          "Yaw": 0,
+          "Pitch": 0,
+          "Roll": 0,
+          "CaptureSettings": [
+            {
+              "ImageType": 0,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90,
+              "MotionBlurAmount": 0
+            },
+            {
+              "ImageType": 1,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90
+            }
+          ]
+        },
+        "front_left": {
+          "X": 0.5,
+          "Y": -0.1,
+          "Z": -0.1,
+          "Yaw": 0,
+          "Pitch": 0,
+          "Roll": 0,
+          "CaptureSettings": [
+            {
+              "ImageType": 0,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90,
+              "MotionBlurAmount": 0
+            }
+          ]
+        },
+        "front_right": {
+          "X": 0.5,
+          "Y": 0.1,
+          "Z": -0.1,
+          "Yaw": 0,
+          "Pitch": 0,
+          "Roll": 0,
+          "CaptureSettings": [
+            {
+              "ImageType": 0,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90,
+              "MotionBlurAmount": 0
+            }
+          ]
+        }
+      },
+      "Sensors": {
+        "lidar": {
+          "SensorType": 6,
+          "Enabled": true,
+          "NumberOfChannels": 16,
+          "MeasurementsPerCycle": 360,
+          "RotationsPerSecond": 10,
+          "UpdateFrequency": 10,
+          "Range": 80,
+          "HorizontalFOVStart": 0,
+          "HorizontalFOVEnd": 360,
+          "VerticalFOVUpper": 15,
+          "VerticalFOVLower": -45,
+          "X": 0,
+          "Y": 0,
+          "Z": -0.8,
+          "Yaw": 0,
+          "Pitch": 0,
+          "Roll": 0,
+          "DrawDebugPoints": false
+        },
+        "imu": {
+          "SensorType": 2,
+          "Enabled": true,
+          "GenerateNoise": false
+        },
+        "gps": {
+          "SensorType": 3,
+          "Enabled": true,
+          "UpdateFrequency": 10
+        },
+        "barometer": {
+          "SensorType": 1,
+          "Enabled": true,
+          "UpdateFrequency": 20
+        },
+        "magnetometer": {
+          "SensorType": 4,
+          "Enabled": true,
+          "UpdateFrequency": 20
+        },
+        "distance": {
+          "SensorType": 5,
+          "Enabled": true,
+          "MinDistance": 0.2,
+          "MaxDistance": 40,
+          "X": 0.6,
+          "Y": 0,
+          "Z": -0.1,
+          "Yaw": 0,
+          "Pitch": 0,
+          "Roll": 0,
+          "UpdateFrequency": 20,
+          "DrawDebugPoints": false
+        }
+      }
+    }
+  }
+}

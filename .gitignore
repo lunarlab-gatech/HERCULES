@@ -408,6 +408,7 @@ PythonClient/docs/_build
 /promo/
 /Unreal/Environments/BlocksComp/
 docker/LinuxBlocks/*
+/docker/Blocks_packaged_*/
 open_terminals.sh
 ros2/src/VINS-MONO-ROS2
 .~lock.instance_segmentation_colormap.csv#
