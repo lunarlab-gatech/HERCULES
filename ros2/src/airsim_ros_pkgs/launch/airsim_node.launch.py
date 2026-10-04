@@ -4,6 +4,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterValue
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 from ament_index_python.packages import get_package_share_directory
@@ -38,6 +39,16 @@ def generate_launch_description():
     enable_object_transforms_list = DeclareLaunchArgument(
         "enable_object_transforms_list",
         default_value='True')
+
+    image_update_interval = DeclareLaunchArgument(
+        "image_update_interval",
+        default_value='0.025',
+        description='Interval in seconds between camera requests')
+
+    lidar_update_interval = DeclareLaunchArgument(
+        "lidar_update_interval",
+        default_value='0.01',
+        description='Interval in seconds between LiDAR requests')
   
     airsim_node = Node(
             package='airsim_ros_pkgs',
@@ -46,9 +57,11 @@ def generate_launch_description():
             output=LaunchConfiguration('output'),
             parameters=[{
                 'is_vulkan': LaunchConfiguration('is_vulkan'),
-                'update_airsim_img_response_every_n_sec': 0.025,
+                'update_airsim_img_response_every_n_sec': ParameterValue(
+                    LaunchConfiguration('image_update_interval'), value_type=float),
                 'update_airsim_control_every_n_sec': 0.01,
-                'update_lidar_every_n_sec': 0.01,
+                'update_lidar_every_n_sec': ParameterValue(
+                    LaunchConfiguration('lidar_update_interval'), value_type=float),
                 'update_gpulidar_every_n_sec': 0.01,
                 'update_echo_every_n_sec': 0.01,
                 'publish_clock': LaunchConfiguration('publish_clock'),
@@ -69,6 +82,8 @@ def generate_launch_description():
     ld.add_action(host_port)
     ld.add_action(enable_api_control)
     ld.add_action(enable_object_transforms_list)
+    ld.add_action(image_update_interval)
+    ld.add_action(lidar_update_interval)
     ld.add_action(airsim_node)
 
     return ld

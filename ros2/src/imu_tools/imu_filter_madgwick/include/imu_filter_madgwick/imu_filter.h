@@ -97,6 +97,9 @@ class ImuFilter
                                float az, float dt);
 
     void getGravity(float& rx, float& ry, float& rz, float gravity = 9.80665);
+
+    // Reset the filter to the initial state.
+    void reset();
 };
 
 #endif  // IMU_FILTER_MADWICK_IMU_FILTER_H

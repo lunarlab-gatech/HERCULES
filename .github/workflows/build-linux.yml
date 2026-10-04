@@ -6,8 +6,15 @@ on:
 jobs:
   build_linux:
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-20.04, ubuntu-22.04, ubuntu-24.04]
+        include:
+          # clang-12 and libc++, as the Unreal Engine plugin is built
+          - os: ubuntu-22.04
+            build_args: ""
+          # 24.04 has no clang-12 (Unreal builds use ./build.sh --ue-root): check the code compiles with GCC
+          - os: ubuntu-24.04
+            build_args: "--gcc"
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v4
@@ -16,7 +23,7 @@ jobs:
       run: ./setup.sh --no-full-poly-car
 
     - name: Build
-      run: ./build.sh
+      run: ./build.sh ${{ matrix.build_args }}
 
     - name: Verify MavLink built
       run: ./build_release/output/bin/MavLinkTest --help

@@ -1,39 +1,186 @@
 # airsim_ros_pkgs
 
 A ROS2 wrapper over the HERCULES C++ client library. All coordinates and data are in the right-handed coordinate frame of the ROS standard and not in NED except for geo points.
-The following was tested on Ubuntu 22.04 with ROS2 Iron.
+The workspace builds on ROS 2 Jazzy (Ubuntu 24.04) and ROS 2 Lyrical (Ubuntu 26.04).
 
 ## Build
 
 - Build HERCULES as per the instructions.
 
-- Make sure that you have set up the environment variables for ROS. Add the `source` command to your `.bashrc` for convenience (replace `iron` with specific version name) -
+- Source your ROS distribution (replace `jazzy` with `lyrical` when using Lyrical) and enter the ROS workspace from the HERCULES repository root:
+
 ```shell
-echo "source /opt/ros/iron/setup.bash" >> ~/.bashrc
-source ~/.bashrc
+source /opt/ros/jazzy/setup.bash
+cd ros2
 ```
 
--- Install dependencies with rosdep, if not already installed -
+All remaining commands run inside `HERCULES/ros2`. If your terminal is already there, skip `cd ros2`; use `src` as the dependency path, not `ros2/src`.
+
+- Set up rosdep once, if it is not already installed and initialized:
 
 ```shell
-apt-get install python3-rosdep
+sudo apt-get install python3-rosdep
 sudo rosdep init
 rosdep update
-rosdep install --from-paths src -y --ignore-src --skip-keys pcl --skip-keys message_runtime --skip-keys message_generation
 ```
 
-- Build ROS package
+- Install dependencies and build the workspace. The build runs only if dependency installation succeeds:
 
 ```shell
-colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
+rosdep install --from-paths src --ignore-src -y --rosdistro "$ROS_DISTRO" &&
+  colcon build --cmake-clean-cache --cmake-args -DCMAKE_BUILD_TYPE=Release
 ```
 
 ## Running
 
+After a successful build, start the simulator and press Play if using the Unreal editor. The simulator must expose its RPC server (default `localhost:41451`) before the ROS wrapper can initialize.
+
+For a basic test without installing Unreal Editor, the repository includes a downloader for the upstream Cosys-AirSim Blocks packaged Linux demo. From `HERCULES/ros2`, run it in a separate terminal:
+
 ```shell
-source install/setup.bash
-ros2 launch airsim_ros_pkgs airsim_node.launch.py
+(cd ../docker &&
+  bash download_blocks_env_binary.sh &&
+  bash Blocks_packaged_Linux_52_32/Linux/Blocks.sh -windowed -ResX=1280 -ResY=720)
 ```
+
+This demo provides the upstream test environment. HERCULES-specific environments and features require the HERCULES simulator plugin.
+
+The bridge detects the mode of a single default vehicle when the simulator's settings omit `SimMode`, as can happen after interactive vehicle selection in the packaged demo. For custom vehicle configurations, set `SimMode` explicitly in the simulator's `settings.json` (for example, `"SimMode": "Car"`) and restart the simulator after editing the file.
+
+```shell
+source install/setup.bash &&
+  ros2 launch airsim_ros_pkgs airsim_node.launch.py
+```
+
+For a simulator on another machine or port, pass `host_ip:=<simulator-ip>` and `host_port:=<rpc-port>` to the launch command. Repeated `Waiting for connection - X...` output means the wrapper has not connected to that endpoint. Check the simulator's `RpcEnabled`, `LocalHostIp`, and `ApiServerPort` settings and any firewall between the machines.
+
+The AirLib connection wait does not observe ROS shutdown, so Ctrl-C during this wait can require launch to escalate to SIGKILL. Do not launch after a failed build: an existing installation can still run an older executable.
+
+For the packaged Blocks demo's default car, open RViz in another terminal from `HERCULES/ros2`:
+
+```shell
+source install/setup.bash &&
+  rviz2 -d rviz2_configs/blocks_car.rviz
+```
+
+This configuration shows a grid, coordinate frames, and the car's odometry trail in the `world` frame. The view follows `PhysXCar/odom_local`. RViz must use the same `ROS_DOMAIN_ID` and middleware settings as the bridge. Camera images and LiDAR point clouds require those sensors to be configured in the simulator before starting the bridge.
+
+### Blocks car with sensors
+
+The included `ros2/settings/blocks_car_sensors.json` enables a 16-channel LiDAR, three front RGB cameras, front-center planar depth, IMU, GPS, barometer, magnetometer, and a forward distance sensor. Camera images are 640 by 360 pixels. The camera and range sensor mounts are forward of the car body, and the LiDAR is raised above it to avoid self-obstruction. Settings use metres in the vehicle's NED frame: positive X is forward, positive Y is right, and negative Z is up.
+
+Stop an existing Blocks simulator and bridge before using this configuration. Run these commands in separate terminals, each from `HERCULES/ros2`.
+
+Start the simulator with an explicit settings path; this leaves `~/Documents/AirSim/settings.json` unchanged:
+
+```shell
+bash ../docker/Blocks_packaged_Linux_52_32/Linux/Blocks.sh \
+  -settings="$(pwd)/settings/blocks_car_sensors.json" \
+  -windowed -ResX=1280 -ResY=720
+```
+
+Once the simulator is running, start the bridge with 10 Hz camera and LiDAR requests:
+
+```shell
+source install/setup.bash &&
+  ros2 launch airsim_ros_pkgs airsim_node.launch.py \
+    host_ip:=127.0.0.1 image_update_interval:=0.1 lidar_update_interval:=0.1
+```
+
+Open the RViz configuration:
+
+```shell
+source install/setup.bash &&
+  rviz2 -d rviz2_configs/blocks_car.rviz
+```
+
+RViz displays the LiDAR cloud, front RGB and depth images, IMU axes and acceleration, and odometry. Enable the `Left RGB` and `Right RGB` displays to view the other cameras. Sensor topics are below `/airsim_node/PhysXCar/`:
+
+| Topic suffix | Data |
+| --- | --- |
+| `lidar/points/lidar` | `sensor_msgs/msg/PointCloud2` |
+| `front_center_Scene/image` | RGB image |
+| `front_center_DepthPlanar/image` | Float depth image in metres |
+| `front_left_Scene/image`, `front_right_Scene/image` | Left and right RGB images |
+| `imu/imu` | `sensor_msgs/msg/Imu` |
+| `gps/gps` | `sensor_msgs/msg/NavSatFix` |
+| `altimeter/barometer` | `airsim_interfaces/msg/Altimeter` |
+| `magnetometer/magnetometer` | `sensor_msgs/msg/MagneticField` |
+| `distance/distance` | `sensor_msgs/msg/Range` |
+
+Each camera image topic has a corresponding `camera_info` topic. The bridge's control timer republishes IMU, GPS, and the other scalar sensors at 100 Hz by default; their measurement timestamps indicate when the simulator produced new samples. Camera and LiDAR request intervals are configurable through the launch arguments shown above.
+
+### Blocks UAV with sensors
+
+The same packaged Blocks environment supports the SimpleFlight multirotor. `ros2/settings/blocks_uav_sensors.json` selects it automatically and enables the same camera and sensor streams as the car profile. The cameras sit 0.5 metres forward of the drone centre, the LiDAR sits 0.8 metres above it to clear the propellers, and its vertical field of view extends down to -45 degrees to see the ground in flight.
+
+Stop the existing simulator and bridge, then run these commands in separate terminals from `HERCULES/ros2`.
+
+Start the UAV simulator:
+
+```shell
+bash ../docker/Blocks_packaged_Linux_52_32/Linux/Blocks.sh \
+  -settings="$(pwd)/settings/blocks_uav_sensors.json" \
+  -windowed -ResX=1280 -ResY=720
+```
+
+Start the bridge with API control enabled. This enables API control and arms the simulated UAV:
+
+```shell
+source install/setup.bash &&
+  ros2 launch airsim_ros_pkgs airsim_node.launch.py \
+    host_ip:=127.0.0.1 enable_api_control:=True \
+    image_update_interval:=0.1 lidar_update_interval:=0.1 \
+    enable_object_transforms_list:=False
+```
+
+Open the UAV view:
+
+```shell
+source install/setup.bash &&
+  rviz2 -d rviz2_configs/blocks_uav.rviz
+```
+
+The view follows `SimpleFlight/odom_local`, with sensor topics below `/airsim_node/SimpleFlight/`. Use the same ROS domain and middleware settings in each terminal. Once the bridge has initialized, take off from another sourced terminal:
+
+```shell
+ros2 service call /airsim_node/SimpleFlight/takeoff \
+  airsim_interfaces/srv/Takeoff "{wait_on_last_task: false}"
+```
+
+The drone climbs and holds position. With `wait_on_last_task: false`, the service's `success` field reports command submission and returns before flight completes. With `true`, it reports the simulator's task result. In the packaged Blocks 5.2-v3.2 demo, a waited takeoff was observed to climb about 1.5 metres and hold position but return `success: false` after its 20-second task timeout. Use the asynchronous command above and check the odometry in RViz to confirm flight. Land with:
+
+```shell
+ros2 service call /airsim_node/SimpleFlight/land \
+  airsim_interfaces/srv/Land "{wait_on_last_task: true}"
+```
+
+To return to the car, stop the UAV simulator and bridge and use the car settings and RViz commands above.
+
+#### Keyboard flight
+
+With the UAV airborne and the bridge running, use terminal keyboard controls:
+
+```shell
+source install/setup.bash &&
+  ros2 run airsim_ros_pkgs uav_keyboard_teleop.py
+```
+
+Keep that terminal focused while flying. Controls follow the drone's heading:
+
+| Keys | Action |
+| --- | --- |
+| W / S | Forward / backward |
+| A / D | Left / right |
+| R / F | Up / down |
+| Q / E | Turn left / right |
+| Space | Stop and hover |
+| G | Land and exit |
+| X or Ctrl-C | Exit and leave the drone hovering |
+
+Hold a movement key to keep moving. Commands stop within 0.6 seconds of releasing the key. The defaults are 0.8 m/s horizontally, 0.5 m/s vertically, and 30 degrees/s turning; adjust them with `--speed`, `--vertical-speed`, and `--yaw-rate`. This controller uses the existing ROS bridge and needs no additional Python packages. Use the same ROS domain and middleware settings as the bridge and RViz. To fly a drone of a Hero-mode team through `hercules_node`, add `--bridge hercules`; see [Running a UAV–UGV Team](hero_team_quickstart.md#fly-the-drones-from-ros-2).
+
+If the keyboard controller reports no active UAV bridge, check the bridge terminal for errors. The simulator window can remain open after the ROS bridge has exited. Restart the bridge using the command above and wait for `AirsimROSWrapper Initialized!` before starting the controller again.
 
 ## Using HERCULES ROS wrapper
 

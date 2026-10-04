@@ -57,9 +57,17 @@ macro(CommonSetup)
                 ${RPC_LIB_DEFINES} ${CMAKE_CXX_FLAGS}")
 
             if (${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
-                set(CMAKE_CXX_FLAGS "-stdlib=libc++ -Wno-documentation -Wno-unknown-warning-option ${CMAKE_CXX_FLAGS}")
-                find_package(LLVM REQUIRED CONFIG)
-                set(CXX_EXP_LIB "-L${LLVM_LIBRARY_DIRS} -ferror-limit=10")
+                if (USING_UE_TOOLCHAIN)
+                    # Unreal Engine's bundled toolchain (build.sh --ue-root): compile against
+                    # UE's own libc++ so the static libraries link into the plugin. build.sh
+                    # supplies the sysroot and UE's static libc++/libc++abi for executables.
+                    set(CMAKE_CXX_FLAGS "-nostdinc++ -isystem \"${UE_LIBCXX_INCLUDE_DIR}\" -Wno-documentation -Wno-unknown-warning-option ${CMAKE_CXX_FLAGS}")
+                    set(CXX_EXP_LIB "-ferror-limit=10")
+                else()
+                    set(CMAKE_CXX_FLAGS "-stdlib=libc++ -Wno-documentation -Wno-unknown-warning-option ${CMAKE_CXX_FLAGS}")
+                    find_package(LLVM REQUIRED CONFIG)
+                    set(CXX_EXP_LIB "-L${LLVM_LIBRARY_DIRS} -ferror-limit=10")
+                endif()
             else()
                 set(CXX_EXP_LIB "-fmax-errors=10 -Wnoexcept -Wstrict-null-sentinel")
             endif ()

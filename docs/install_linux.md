@@ -28,10 +28,15 @@ You can alternatively install Unreal Engine from source if you do not use a Ubun
    ./setup.sh
    ./build.sh
    ```
+- On Ubuntu 24.04 and newer (the releases for ROS 2 Jazzy and Lyrical), `clang-12` is no longer packaged. Build with Unreal Engine's bundled toolchain instead, passing the folder that contains `Engine/`:
+   ```bash
+   ./build.sh --ue-root /path/to/UnrealEngine
+   ```
+   You can also `export UE_ROOT=/path/to/UnrealEngine` once and run `./build.sh`. This builds AirLib with the same compiler, sysroot and libc++ as the plugin, which avoids link errors such as `undefined symbol: __isoc23_strtol` from the newer system glibc.
 
 ## Build Unreal Environment
 
-Finally, you will need an Unreal project that hosts the environment for your vehicles. HERCULES comes with a built-in "Blocks Environment" which you can use, or you can create your own. Please see [setting up Unreal Environment](unreal_proj.md) if you'd like to setup your own environment.
+Finally, you will need an Unreal project that hosts the environment for your vehicles. HERCULES includes the scaffolding of the "Blocks Environment", but its `Blocks.uproject` and `Content/` are not in the repository; [Running a UAV–UGV team](hero_team_quickstart.md) shows how to fetch them. You can also create your own environment; see [setting up Unreal Environment](unreal_proj.md).
 
 ## How to Use HERCULES
 

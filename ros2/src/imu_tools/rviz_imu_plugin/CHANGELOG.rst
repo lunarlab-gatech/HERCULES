@@ -2,7 +2,19 @@
 Changelog for package rviz_imu_plugin
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-2.1.5 (2024-10-01)
+2.2.2 (2026-01-13)
+------------------
+* Update deprecated message filters and tf2 headers (`#222 <https://github.com/CCNYRoboticsLab/imu_tools/issues/222>`_)
+* Add Qt6 support (`#221 <https://github.com/CCNYRoboticsLab/imu_tools/issues/221>`_)
+* Contributors: Alejandro Hernández Cordero
+
+2.2.1 (2025-05-15)
+------------------
+* Fix deprecated header includes (`#216 <https://github.com/CCNYRoboticsLab/imu_tools/issues/216>`_)
+* [kilted] Update deprecated call to ament_target_dependencies (`#215 <https://github.com/CCNYRoboticsLab/imu_tools/issues/215>`_)
+* Contributors: David V. Lu!!, Martin Günther
+
+2.2.0 (2024-10-01)
 ------------------
 
 2.1.4 (2024-04-26)

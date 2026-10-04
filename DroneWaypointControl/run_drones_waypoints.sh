@@ -2,7 +2,9 @@
 
 # Absolute path to your executable
 # EXECUTABLE_PATH=/home/sgarimella34/multi-robot-coordination/Cosys-AirSim/build_debug/output/bin/DroneWaypointControl
-EXECUTABLE_PATH=/home/sgarimella34/multi-robot-coordination/Cosys-AirSim/build_release/output/bin/DroneWaypointControl
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Built by ./build.sh; override with EXECUTABLE_PATH=... if yours lives elsewhere.
+EXECUTABLE_PATH="${EXECUTABLE_PATH:-$SCRIPT_DIR/../build_release/output/bin/DroneWaypointControl}"
 # EXECUTABLE_PATH=/home/dellg16ssg/multi-robot-coordination/Cosys-AirSim/build_release/output/bin/DroneWaypointControl
 
 # Base path for waypoint files
@@ -29,7 +31,8 @@ EXECUTABLE_PATH=/home/sgarimella34/multi-robot-coordination/Cosys-AirSim/build_r
 # WAYPOINT_DIR="/home/sgarimella34/multi-robot-coordination/trajectory_data/CSLAM_random_explore/customforest_test1/"
 
 # SmallTown MG planning demo:
-WAYPOINT_DIR="/home/sgarimella34/multi-robot-coordination/trajectory_data/CSLAM_random_explore/smalltown_test1"
+# Folder holding <Vehicle>_trajectory.txt files; override with WAYPOINT_DIR=...
+WAYPOINT_DIR="${WAYPOINT_DIR:-$SCRIPT_DIR/../trajectory_data}"
 
 # WAYPOINT_DIR="/home/sgarimella34/Documents/trajectory_editor_sandbox/"
 # WAYPOINT_DIR="/home/sgarimella34/multi-robot-coordination/trajectory_data/test_drone/"
@@ -54,7 +57,7 @@ VELOCITY=0.75
 # FLY_ALTITUDE=-3.0 # for ausenv road seq
 # FLY_ALTITUDE=-10.0 
 # FLY_ALTITUDE=-24.0
-FLY_ALTITUDE=-4.0 #for customforest
+FLY_ALTITUDE="${FLY_ALTITUDE:--4.0}" #for customforest
 
 # for under the canopy flying in AUsEnv
 # FLY_ALTITUDE=-2.5  
@@ -63,7 +66,7 @@ FLY_ALTITUDE=-4.0 #for customforest
 # FLY_ALTITUDE=-35.0
 
 # Manually set return-home behavior (set to true or false)
-DISABLE_RETURN_HOME=true
+DISABLE_RETURN_HOME="${DISABLE_RETURN_HOME:-true}"
 
 # Altitude mode: "fixed" flies every waypoint at FLY_ALTITUDE (legacy behavior);
 # "waypoint" flies at each waypoint's own recorded Z (clamped to >=1m above origin).
@@ -89,6 +92,11 @@ fi
 RETURN_HOME=true
 if [[ "$DISABLE_RETURN_HOME" == "true" ]]; then
     RETURN_HOME=false
+fi
+
+if [[ ! -x "$EXECUTABLE_PATH" ]]; then
+    echo "ERROR: $EXECUTABLE_PATH not found. Build it with ./build.sh, or set EXECUTABLE_PATH."
+    exit 1
 fi
 
 # Store PIDs to wait on
