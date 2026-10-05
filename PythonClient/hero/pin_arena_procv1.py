@@ -67,10 +67,13 @@ def main():
     # *_obstacles arena copies (2026-10-05): every Obstacle_* actor (crashed helicopters, cars, trees) is pinned
     # to seg ID 0 so its default (mesh-name-hashed) ID can never land on a terrain-class colour. The extractor
     # treats non-palette-coloured in-band voxels as geometric obstacles, which is what these are meant to be.
-    # Harmless on the original arenas (no match -> False, nothing pinned).
+    # Harmless on the original arenas (no Obstacle_* actors -> nothing pinned). The regex form of
+    # simSetSegmentationObjectID returns False in this build for every pattern (verified live 2026-10-05, even
+    # ".*Obstacle.*"), so enumerate the actors with simListSceneObjects and pin each by exact name.
     try:
-        ob = c.simSetSegmentationObjectID("Obstacle_.*", 0, True)
-        print("obstacle actors (Obstacle_.*) -> ID 0 : %s" % ob)
+        obs = sorted(c.simListSceneObjects("Obstacle_.*"))
+        pinned = [n for n in obs if c.simSetSegmentationObjectID(n, 0, False)]
+        print("obstacle actors -> ID 0 : %d/%d %s" % (len(pinned), len(obs), pinned))
     except Exception as e:
         print("obstacle pin skipped (%s)" % type(e).__name__)
 
