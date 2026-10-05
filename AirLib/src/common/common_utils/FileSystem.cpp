@@ -102,7 +102,8 @@ std::string FileSystem::getExecutableFolder()
     HMODULE hModule = GetModuleHandle(NULL);
 
     if (NULL != hModule) {
-        if (0 < GetModuleFileName(hModule, szPath, sizeof(szPath))) {
+        // the size is in characters, not bytes
+        if (0 < GetModuleFileName(hModule, szPath, MAX_PATH)) {
             std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
             path = converter.to_bytes(szPath);
         }
@@ -126,8 +127,12 @@ std::string FileSystem::getExecutableFolder()
     path = std::string(szPath);
 #else
     char szPath[8192];
-    readlink("/proc/self/exe", szPath, sizeof(szPath));
-    path = std::string(szPath);
+    // readlink does not NUL-terminate: build the string from its length
+    const ssize_t length = readlink("/proc/self/exe", szPath, sizeof(szPath));
+    if (length <= 0 || static_cast<size_t>(length) >= sizeof(szPath))
+        throw std::invalid_argument(Utils::stringf("Error getting executable folder: %s",
+                                                   length < 0 ? strerror(errno) : "path too long"));
+    path = std::string(szPath, static_cast<size_t>(length));
 #endif
 
     size_t pathSeparatorIndex = path.find_last_of(kPathSeparator);

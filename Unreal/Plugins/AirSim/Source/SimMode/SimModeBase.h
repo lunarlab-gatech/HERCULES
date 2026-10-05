@@ -8,7 +8,7 @@
 #include "ParticleDefinitions.h"
 #include "Annotation/ObjectAnnotator.h"
 #include <string>
-#include "CameraDirector.h"
+#include "AirSimCameraDirector.h"
 #include "common/AirSimSettings.hpp"
 #include "AssetRegistry/AssetData.h"
 #include "common/ClockFactory.hpp"
@@ -34,7 +34,7 @@ public:
     FLevelLoaded OnLevelLoaded;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Refs")
-    ACameraDirector *CameraDirector;
+    AAirSimCameraDirector *CameraDirector;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debugging")
     bool EnableReport = false;
@@ -50,6 +50,15 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Instance Segmentation")
     void ForceUpdateInstanceSegmentation();
+
+    /** Gives a mesh component created at run time, such as a streamed map tile, the instance
+     *  segmentation ID of a registered object's component, without listing it as an object of its
+     *  own. Call UnpaintInstanceSegmentationComponent before the component is destroyed. */
+    UFUNCTION(BlueprintCallable, Category = "Instance Segmentation")
+    bool PaintInstanceSegmentationComponentAs(UMeshComponent *Component, UMeshComponent *ObjectComponent, bool update_annotation = true);
+
+    UFUNCTION(BlueprintCallable, Category = "Instance Segmentation")
+    void UnpaintInstanceSegmentationComponent(UMeshComponent *Component, bool update_annotation = true);
 
     UFUNCTION(BlueprintCallable, Category = "Annotation")
     bool DoesAnnotationLayerExist(FString annotation_name);
@@ -141,6 +150,11 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Airsim | get stuff")
     virtual void reset();
+
+    /** Moves the geographic origin (the PlayerStart) to a new latitude, longitude and altitude,
+     *  and every vehicle's home with it, for example for a georeferenced world placed at run time. */
+    UFUNCTION(BlueprintCallable, Category = "Airsim | get stuff")
+    void SetOriginGeoPoint(double Latitude, double Longitude, double Altitude);
 
     // Sets default values for this actor's properties
     ASimModeBase();
@@ -326,6 +340,10 @@ private:
     mutable std::map<APawn *, std::string> pawn_to_vehicle_;
 
 private:
+    // Instance segmentation refreshes (see updateInstanceSegmentationAnnotation)
+    uint64 instance_segmentation_refresh_serial_ = 0;
+    TWeakObjectPtr<APlayerController> instance_segmentation_hidden_controller_;
+    uint64 instance_segmentation_controller_serial_ = 0;
     void InitializeInstanceSegmentation();
     void InitializeAnnotation();
     void AddAnnotatorCamera(FString name, FObjectAnnotator::AnnotatorType type, float max_view_distance = -1.0f);

@@ -49,11 +49,18 @@ else # linux
         clang_version='12'
         cpp_version='10'
     fi
-    sudo apt-get install -y \
-        clang-$clang_version \
-        libc++-$clang_version-dev \
-        libc++abi-$clang_version-dev \
-        libstdc++-$cpp_version-dev
+    # Ubuntu 24.04 and newer no longer package clang-12; there AirLib is built with
+    # Unreal Engine's bundled toolchain instead (./build.sh --ue-root <UE dir>).
+    if [ -n "$(apt-cache madison clang-$clang_version 2>/dev/null)" ]; then
+        sudo apt-get install -y \
+            clang-$clang_version \
+            libc++-$clang_version-dev \
+            libc++abi-$clang_version-dev \
+            libstdc++-$cpp_version-dev
+    else
+        echo "clang-$clang_version is not available on this Ubuntu release; skipping it."
+        echo "Build with Unreal Engine's toolchain: ./build.sh --ue-root /path/to/UnrealEngine"
+    fi
 fi
 
 if ! which cmake; then
@@ -97,7 +104,12 @@ else #linux
         VERSION=$(lsb_release -rs | cut -d. -f1)
         # For Ubuntu 18 and up, avoid building cmake from scratch to save time
         # ref: https://apt.kitware.com
-        if [ "$VERSION" -ge "18" ]; then
+        if [ "$VERSION" -ge "20" ]; then
+            # The distribution's cmake is new enough (Kitware's bionic packages need libssl1.1, gone since 22.04)
+            sudo apt-get -y install --no-install-recommends \
+                make \
+                cmake
+        elif [ "$VERSION" -ge "18" ]; then
             sudo apt-get -y install \
                 apt-transport-https \
                 ca-certificates \
@@ -133,19 +145,19 @@ fi # End USB setup, CMake install
 
 
 # Download rpclib
-if [ ! -d "external/rpclib/rpclib-2.3.0" ]; then
+if [ ! -d "external/rpclib/rpclib-2.3.1" ]; then
     echo "*********************************************************************************************"
     echo "Downloading rpclib..."
     echo "*********************************************************************************************"
 
-    wget https://github.com/rpclib/rpclib/archive/v2.3.0.zip
+    wget https://github.com/WouterJansen/rpclib/archive/refs/tags/v2.3.1.zip
 
     # remove previous versions
     rm -rf "external/rpclib"
 
     mkdir -p "external/rpclib"
-    unzip -q v2.3.0.zip -d external/rpclib
-    rm v2.3.0.zip
+    unzip -q v2.3.1.zip -d external/rpclib
+    rm v2.3.1.zip
 fi
 
 # Download high-polycount SUV model
@@ -181,7 +193,7 @@ echo "Installing Eigen library..."
 
 if [ ! -d "AirLib/deps/eigen3" ]; then
     echo "Downloading Eigen..."
-    wget -O eigen3.zip https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip
+    wget -O eigen3.zip https://github.com/WouterJansen/eigen/archive/refs/tags/3.4.1r.zip
     unzip -q eigen3.zip -d temp_eigen
     mkdir -p AirLib/deps/eigen3
     mv temp_eigen/eigen*/Eigen AirLib/deps/eigen3

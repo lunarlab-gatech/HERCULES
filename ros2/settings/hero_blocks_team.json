@@ -1,0 +1,483 @@
+{
+  "SettingsVersion": 2.0,
+  "SimMode": "Hero",
+  "RpcEnabled": true,
+  "LocalHostIp": "127.0.0.1",
+  "PawnPaths": {
+    "UGVPawn": {
+      "PawnBP": "Class'/AirSim/VehicleAdv/SUV/UGVPawn.UGVPawn_C'"
+    }
+  },
+  "Vehicles": {
+    "Drone1": {
+      "VehicleType": "SimpleFlight",
+      "AutoCreate": true,
+      "X": 0,
+      "Y": 0,
+      "Z": 0,
+      "Yaw": 0,
+      "Cameras": {
+        "front_center": {
+          "X": 0.5,
+          "Y": 0.0,
+          "Z": -0.1,
+          "Yaw": 0,
+          "Pitch": 0,
+          "Roll": 0,
+          "CaptureSettings": [
+            {
+              "ImageType": 0,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90,
+              "MotionBlurAmount": 0
+            },
+            {
+              "ImageType": 1,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90
+            },
+            {
+              "ImageType": 2,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90
+            },
+            {
+              "ImageType": 5,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90
+            }
+          ]
+        },
+        "stereo_left": {
+          "X": 0.5,
+          "Y": -0.06,
+          "Z": -0.1,
+          "Yaw": 0,
+          "Pitch": 0,
+          "Roll": 0,
+          "CaptureSettings": [
+            {
+              "ImageType": 0,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90,
+              "MotionBlurAmount": 0
+            }
+          ]
+        },
+        "stereo_right": {
+          "X": 0.5,
+          "Y": 0.06,
+          "Z": -0.1,
+          "Yaw": 0,
+          "Pitch": 0,
+          "Roll": 0,
+          "CaptureSettings": [
+            {
+              "ImageType": 0,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90,
+              "MotionBlurAmount": 0
+            }
+          ]
+        }
+      },
+      "Sensors": {
+        "imu": {
+          "SensorType": 2,
+          "Enabled": true
+        },
+        "gps": {
+          "SensorType": 3,
+          "Enabled": true
+        },
+        "barometer": {
+          "SensorType": 1,
+          "Enabled": true
+        },
+        "magnetometer": {
+          "SensorType": 4,
+          "Enabled": true
+        },
+        "LidarSensor1": {
+          "SensorType": 6,
+          "Enabled": true,
+          "NumberOfChannels": 16,
+          "MeasurementsPerCycle": 360,
+          "RotationsPerSecond": 10,
+          "UpdateFrequency": 10,
+          "Range": 80,
+          "HorizontalFOVStart": 0,
+          "HorizontalFOVEnd": 360,
+          "VerticalFOVUpper": 15,
+          "VerticalFOVLower": -45,
+          "X": 0,
+          "Y": 0,
+          "Z": -0.8,
+          "Yaw": 0,
+          "Pitch": 0,
+          "Roll": 0,
+          "DrawDebugPoints": false
+        }
+      }
+    },
+    "Drone2": {
+      "VehicleType": "SimpleFlight",
+      "AutoCreate": true,
+      "X": 0,
+      "Y": 6,
+      "Z": 0,
+      "Yaw": 0,
+      "Cameras": {
+        "front_center": {
+          "X": 0.5,
+          "Y": 0.0,
+          "Z": -0.1,
+          "Yaw": 0,
+          "Pitch": 0,
+          "Roll": 0,
+          "CaptureSettings": [
+            {
+              "ImageType": 0,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90,
+              "MotionBlurAmount": 0
+            },
+            {
+              "ImageType": 1,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90
+            },
+            {
+              "ImageType": 2,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90
+            },
+            {
+              "ImageType": 5,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90
+            }
+          ]
+        },
+        "stereo_left": {
+          "X": 0.5,
+          "Y": -0.06,
+          "Z": -0.1,
+          "Yaw": 0,
+          "Pitch": 0,
+          "Roll": 0,
+          "CaptureSettings": [
+            {
+              "ImageType": 0,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90,
+              "MotionBlurAmount": 0
+            }
+          ]
+        },
+        "stereo_right": {
+          "X": 0.5,
+          "Y": 0.06,
+          "Z": -0.1,
+          "Yaw": 0,
+          "Pitch": 0,
+          "Roll": 0,
+          "CaptureSettings": [
+            {
+              "ImageType": 0,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90,
+              "MotionBlurAmount": 0
+            }
+          ]
+        }
+      },
+      "Sensors": {
+        "imu": {
+          "SensorType": 2,
+          "Enabled": true
+        },
+        "gps": {
+          "SensorType": 3,
+          "Enabled": true
+        },
+        "barometer": {
+          "SensorType": 1,
+          "Enabled": true
+        },
+        "magnetometer": {
+          "SensorType": 4,
+          "Enabled": true
+        },
+        "LidarSensor1": {
+          "SensorType": 6,
+          "Enabled": true,
+          "NumberOfChannels": 16,
+          "MeasurementsPerCycle": 360,
+          "RotationsPerSecond": 10,
+          "UpdateFrequency": 10,
+          "Range": 80,
+          "HorizontalFOVStart": 0,
+          "HorizontalFOVEnd": 360,
+          "VerticalFOVUpper": 15,
+          "VerticalFOVLower": -45,
+          "X": 0,
+          "Y": 0,
+          "Z": -0.8,
+          "Yaw": 0,
+          "Pitch": 0,
+          "Roll": 0,
+          "DrawDebugPoints": false
+        }
+      }
+    },
+    "Husky1": {
+      "VehicleType": "PhysXCar",
+      "PawnPath": "UGVPawn",
+      "AutoCreate": true,
+      "X": 6,
+      "Y": 0,
+      "Z": 0,
+      "Yaw": 0,
+      "Cameras": {
+        "front_center": {
+          "X": 0.5,
+          "Y": 0.0,
+          "Z": -0.4,
+          "Yaw": 0,
+          "Pitch": 0,
+          "Roll": 0,
+          "CaptureSettings": [
+            {
+              "ImageType": 0,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90,
+              "MotionBlurAmount": 0
+            },
+            {
+              "ImageType": 1,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90
+            },
+            {
+              "ImageType": 2,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90
+            },
+            {
+              "ImageType": 5,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90
+            }
+          ]
+        },
+        "stereo_left": {
+          "X": 0.5,
+          "Y": -0.06,
+          "Z": -0.4,
+          "Yaw": 0,
+          "Pitch": 0,
+          "Roll": 0,
+          "CaptureSettings": [
+            {
+              "ImageType": 0,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90,
+              "MotionBlurAmount": 0
+            }
+          ]
+        },
+        "stereo_right": {
+          "X": 0.5,
+          "Y": 0.06,
+          "Z": -0.4,
+          "Yaw": 0,
+          "Pitch": 0,
+          "Roll": 0,
+          "CaptureSettings": [
+            {
+              "ImageType": 0,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90,
+              "MotionBlurAmount": 0
+            }
+          ]
+        }
+      },
+      "Sensors": {
+        "imu": {
+          "SensorType": 2,
+          "Enabled": true
+        },
+        "gps": {
+          "SensorType": 3,
+          "Enabled": true
+        },
+        "barometer": {
+          "SensorType": 1,
+          "Enabled": true
+        },
+        "magnetometer": {
+          "SensorType": 4,
+          "Enabled": true
+        },
+        "LidarSensor1": {
+          "SensorType": 6,
+          "Enabled": true,
+          "NumberOfChannels": 16,
+          "MeasurementsPerCycle": 360,
+          "RotationsPerSecond": 10,
+          "UpdateFrequency": 10,
+          "Range": 80,
+          "HorizontalFOVStart": 0,
+          "HorizontalFOVEnd": 360,
+          "VerticalFOVUpper": 15,
+          "VerticalFOVLower": -25,
+          "X": 0,
+          "Y": 0,
+          "Z": -0.9,
+          "Yaw": 0,
+          "Pitch": 0,
+          "Roll": 0,
+          "DrawDebugPoints": false
+        }
+      }
+    },
+    "Husky2": {
+      "VehicleType": "PhysXCar",
+      "PawnPath": "UGVPawn",
+      "AutoCreate": true,
+      "X": 6,
+      "Y": 6,
+      "Z": 0,
+      "Yaw": 0,
+      "Cameras": {
+        "front_center": {
+          "X": 0.5,
+          "Y": 0.0,
+          "Z": -0.4,
+          "Yaw": 0,
+          "Pitch": 0,
+          "Roll": 0,
+          "CaptureSettings": [
+            {
+              "ImageType": 0,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90,
+              "MotionBlurAmount": 0
+            },
+            {
+              "ImageType": 1,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90
+            },
+            {
+              "ImageType": 2,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90
+            },
+            {
+              "ImageType": 5,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90
+            }
+          ]
+        },
+        "stereo_left": {
+          "X": 0.5,
+          "Y": -0.06,
+          "Z": -0.4,
+          "Yaw": 0,
+          "Pitch": 0,
+          "Roll": 0,
+          "CaptureSettings": [
+            {
+              "ImageType": 0,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90,
+              "MotionBlurAmount": 0
+            }
+          ]
+        },
+        "stereo_right": {
+          "X": 0.5,
+          "Y": 0.06,
+          "Z": -0.4,
+          "Yaw": 0,
+          "Pitch": 0,
+          "Roll": 0,
+          "CaptureSettings": [
+            {
+              "ImageType": 0,
+              "Width": 640,
+              "Height": 360,
+              "FOV_Degrees": 90,
+              "MotionBlurAmount": 0
+            }
+          ]
+        }
+      },
+      "Sensors": {
+        "imu": {
+          "SensorType": 2,
+          "Enabled": true
+        },
+        "gps": {
+          "SensorType": 3,
+          "Enabled": true
+        },
+        "barometer": {
+          "SensorType": 1,
+          "Enabled": true
+        },
+        "magnetometer": {
+          "SensorType": 4,
+          "Enabled": true
+        },
+        "LidarSensor1": {
+          "SensorType": 6,
+          "Enabled": true,
+          "NumberOfChannels": 16,
+          "MeasurementsPerCycle": 360,
+          "RotationsPerSecond": 10,
+          "UpdateFrequency": 10,
+          "Range": 80,
+          "HorizontalFOVStart": 0,
+          "HorizontalFOVEnd": 360,
+          "VerticalFOVUpper": 15,
+          "VerticalFOVLower": -25,
+          "X": 0,
+          "Y": 0,
+          "Z": -0.9,
+          "Yaw": 0,
+          "Pitch": 0,
+          "Roll": 0,
+          "DrawDebugPoints": false
+        }
+      }
+    }
+  }
+}

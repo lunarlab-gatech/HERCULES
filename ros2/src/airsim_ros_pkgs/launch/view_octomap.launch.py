@@ -2,12 +2,26 @@
 
 import os
 from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument, OpaqueFunction
+from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
+
 def generate_launch_description():
-    # Set the full path to your octomap (.bt) file.
-    octree_file = '/home/sgarimella34/Downloads/Ausland1.bt'
-    # octree_file = '/home/sgarimella34/Downloads/sample_octomap.bt'
+    return LaunchDescription([
+        DeclareLaunchArgument('octree_file',
+                              description='octomap (.bt) file to serve, e.g. ~/maps/site.bt'),
+        DeclareLaunchArgument('rviz_config',
+                              default_value=os.path.join('~', 'rviz_config', 'octomap.rviz'),
+                              description='RViz config with an OctoMap display (optional)'),
+        OpaqueFunction(function=_nodes),
+    ])
+
+
+def _nodes(context):
+    octree_file = os.path.expanduser(LaunchConfiguration('octree_file').perform(context))
+    if not os.path.isfile(octree_file):
+        raise RuntimeError('octree_file %s does not exist' % octree_file)
 
     # Launch the octomap_server node.
     octomap_server_node = Node(
@@ -18,13 +32,7 @@ def generate_launch_description():
         parameters=[{'octree_file': octree_file}]
     )
 
-    # Optionally, specify an RViz configuration file.
-    # If you have a config file with an Octomap display already set up, provide its path.
-    rviz_config_file = os.path.join(
-        os.path.expanduser('~'),
-        'rviz_config',  # change this to your directory
-        'octomap.rviz'  # change this to your config filename
-    )
+    rviz_config_file = os.path.expanduser(LaunchConfiguration('rviz_config').perform(context))
 
     # Launch rviz2 (if the config file exists, pass it; otherwise, launch without a config).
     if os.path.exists(rviz_config_file):
@@ -43,7 +51,4 @@ def generate_launch_description():
             output='screen'
         )
 
-    return LaunchDescription([
-        octomap_server_node,
-        rviz2_node,
-    ])
+    return [octomap_server_node, rviz2_node]

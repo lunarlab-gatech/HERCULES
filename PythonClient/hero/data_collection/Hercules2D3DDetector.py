@@ -23,6 +23,13 @@ from collections import defaultdict
 from typing import Tuple
 import os, json, math
 
+# Defaults that work from a repository checkout; override with environment variables.
+_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+DEFAULT_LABEL_CSV = os.environ.get(
+    'HERCULES_LABEL_CSV', os.path.join(_REPO_ROOT, 'csv_data', 'ue_label_vs_name.csv'))
+DEFAULT_SETTINGS_JSON = os.path.expanduser(os.environ.get(
+    'AIRSIM_SETTINGS', os.path.join('~', 'Documents', 'AirSim', 'settings.json')))
+
 # optional visualization
 try:
     import open3d as o3d
@@ -105,7 +112,7 @@ class Hercules2D3DDetector:
     MIN_LIDAR_POINTS_IN_BOX = 10 # Minimum LiDAR points required inside a 3D box to keep/save the label
     
     # --- mapping csv + filters ---
-    CSV_PATH      = "/home/sgarimella34/multi-robot-coordination/Cosys-AirSim/csv_data/ue_label_vs_name.csv"
+    CSV_PATH      = DEFAULT_LABEL_CSV  # actor label -> IDname mapping (env HERCULES_LABEL_CSV)
     KEYWORDS = (
         "human", "person", "pedestrian",
         "car", "truck", "sedan", "suv", "van", "bus", "vehicle",
@@ -138,7 +145,7 @@ class Hercules2D3DDetector:
 
 
     # === LiDAR config from AirSim settings.json (absolute path) ===
-    SETTINGS_JSON_PATH = "/home/sgarimella34/Documents/AirSim/settings.json"
+    SETTINGS_JSON_PATH = DEFAULT_SETTINGS_JSON  # env AIRSIM_SETTINGS
 
     # Global toggle to show any UI (OpenCV windows, Open3D visualizers)
     SHOW_VISUALS = False

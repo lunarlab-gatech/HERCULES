@@ -36,13 +36,13 @@ To add the RPC code to call the new API, follow the steps below. Follow the impl
 
 2. Add the C++ client API method in [RpcClientBase.cpp](https://github.com/lunarlab-gatech/HERCULES/blob/main/AirLib/src/api/RpcLibClientBase.cpp)
 
-3. Add the Python client API method in [client.py](https://github.com/lunarlab-gatech/HERCULES/blob/main/PythonClient/airsim/client.py). If needed, add or modify a structure definition in [types.py](https://github.com/lunarlab-gatech/HERCULES/blob/main/PythonClient/airsim/types.py)
+3. Add the Python client API method in [client.py](https://github.com/lunarlab-gatech/HERCULES/blob/main/PythonClient/hercules_cosysairsim/client.py). If needed, add or modify a structure definition in [types.py](https://github.com/lunarlab-gatech/HERCULES/blob/main/PythonClient/hercules_cosysairsim/types.py)
 
 ## Testing
 
-Testing is required to ensure that the API is working as expected. For this, as expected, you'll have to use the source-built HERCULES and Blocks environment. Apart from this, if using the Python APIs, you'll have to use the `airsim` package from source rather than the PyPI package. Below are 2 ways described to go about using the package from source -
+Testing is required to ensure that the API is working as expected. For this, as expected, you'll have to use the source-built HERCULES and Blocks environment. Apart from this, if using the Python APIs, you'll have to use the `hercules_cosysairsim` package from source rather than a previously installed copy. Below are 2 ways described to go about using the package from source -
 
-1. Use [setup_path.py](https://github.com/lunarlab-gatech/HERCULES/blob/main/PythonClient/multirotor/setup_path.py). It will setup the path such that the local airsim module is used instead of the pip installed package. This is the method used in many of the scripts since the user doesn't need to do anything other than run the script.
+1. Use [setup_path.py](https://github.com/lunarlab-gatech/HERCULES/blob/main/PythonClient/multirotor/setup_path.py). It will setup the path such that the local `hercules_cosysairsim` module is used instead of the pip installed package. This is the method used in many of the scripts since the user doesn't need to do anything other than run the script.
     Place your example script in one of the folders inside `PythonClient` like `multirotor`, `car`, etc. You can also create one to keep things separate, and copy the `setup_path.py` file from another folder.
     Add `import setup_path` before `import hercules_cosysairsim as airsim` in your files. Now the latest main API (or any branch currently checked out) will be used.
 

@@ -38,7 +38,7 @@ The default is to use multirotor. To use car simple set `"SimMode": "Car"` like 
 }
 ```
 
-To choose multirotor or skid vehicle, set `"SimMode": "Multirotor"` or `"SimMode": "SkidVehicle"` respectively. If you want to prompt user to select vehicle type then use `"SimMode": ""`.
+To choose multirotor or skid vehicle, set `"SimMode": "Multirotor"` or `"SimMode": "SkidVehicle"` respectively. For a mixed team of drones and ground vehicles, set `"SimMode": "Hero"` (see [SimMode](#simmode)). If you want to prompt user to select vehicle type then use `"SimMode": ""`.
 
 ## Available Settings and Their Defaults
 Below are complete list of settings available along with their default values. If any of the settings is missing from json file, then default value is used. Some default values are simply specified as `""` which means actual value may be chosen based on the vehicle you are using. For example, `ViewMode` setting has default value `""` which translates to `"FlyWithMe"` for drones and `"SpringArmChase"` for cars.
@@ -223,6 +223,7 @@ SimMode determines which simulation mode will be used. Below are currently suppo
 - `"Car"`: Use car simulation
 - `"ComputerVision"`: Use only camera, no vehicle or physics
 - `"SkidVehicle"`: use [skid-steering vehicle](skid_steer_vehicle.md) simulation
+- `"Hero"`: HERCULES' heterogeneous mode, with multirotors (UAVs) and cars (UGVs) in one simulation. Supported `VehicleType` values are `SimpleFlight`, `PX4Multirotor`, `ArduCopterSolo` and `PhysXCar`. The simulator serves multirotors on RPC port 41451 and cars on port 41452; `ApiServerPort` does not apply. If `Vehicles` is not set, a single `SimpleFlight` drone is created. See [Heterogeneous UAV–UGV Autonomy](heterogeneous_autonomy.md) and [Running a UAV–UGV Team](hero_team_quickstart.md).
 
 ## ViewMode
 The ViewMode determines which camera to use as default and how camera will follow the vehicle. For multirotors, the default ViewMode is `"FlyWithMe"` while for cars the default ViewMode is `"SpringArmChase"`.
@@ -236,6 +237,14 @@ The ViewMode determines which camera to use as default and how camera will follo
 
 ## Annotation
 The annotation system allows you to choose different groundtruth labeling techniques to create more data from your simulation. Find more info [here](annotation.md) for defining the settings.
+
+## SyntheticCameraSettings
+Tunes the CPU-synthesized `ThermalIR` and `NightVision` image types. The block sits at the top level of settings.json and every key is optional; defaults are in parentheses:
+
+* `ThermalIR`: `TempMin` (280.0), `TempMax` (1300.0), `EpsMin` (0.80), `EpsMax` (0.99), `DepthAttenuation` (0.01) and `Overrides` (empty), an array of per-object entries with `Match`, a case-insensitive substring of the mesh name (entries without it are ignored), `TempK` (295.0), `Emissivity` (0.90), `IsAnimal` (false), `IsFire` (false) and `IsKangaroo` (false).
+* `NightVision`: `TempMin` (285.0), `TempMax` (310.0), `EpsMin` (0.85), `EpsMax` (0.98), `BlendAlpha` (0.25), `NvgGain` (1.0) and `Seed` (42).
+
+See the [settings reference](synthetic_cameras.md#settings-reference) of the synthetic IR / NVG camera page for what each key does.
 
 ## TimeOfDay
 This setting controls the position of Sun in the environment. By default `Enabled` is false which means Sun's position is left at whatever was the default in the environment and it doesn't change over the time. If `Enabled` is true then Sun position is computed using longitude, latitude and altitude specified in `OriginGeopoint` section for the date specified in `StartDateTime` in the string format as [%Y-%m-%d %H:%M:%S](https://en.cppreference.com/w/cpp/io/manip/get_time), for example, `2018-02-12 15:20:00`. If this string is empty then current date and time is used. If `StartDateTimeDst` is true then we adjust for day light savings time. The Sun's position is then continuously updated at the interval specified in `UpdateIntervalSecs`. In some cases, it might be desirable to have celestial clock run faster or slower than simulation clock. This can be specified using `CelestialClockSpeed`, for example, value 100 means for every 1 second of simulation clock, Sun's position is advanced by 100 seconds so Sun will move in sky much faster.
@@ -280,7 +289,7 @@ The recording feature allows you to record data such as position, orientation, v
 * `RecordOnMove`: specifies that do not record frame if there was vehicle's position or orientation hasn't changed.
 * `Folder`: Parent folder where timestamped subfolder with recordings are created. Absolute path of the directory must be specified. If not used, then `Documents/AirSim` folder will be used. E.g. `"Folder": "/home/<user>/Documents"`
 * `Enabled`: Whether Recording should start from the beginning itself, setting to `true` will start recording automatically when the simulation starts. By default, it's set to `false`
-* `Cameras`: this element controls which cameras are used to capture images. By default scene image from camera 0 is recorded as compressed png format. This setting is json array so you can specify multiple cameras to capture images, each with potentially different [image types](settings.md#image-capture-settings). 
+* `Cameras`: this element controls which cameras are used to capture images. By default scene image from camera 0 is recorded as compressed png format. This setting is json array so you can specify multiple cameras to capture images, each with potentially different [image types](image_apis.md#available-imagetype-values). 
     * When `PixelsAsFloat` is true, image is saved as [pfm](pfm.md) file instead of png file.
     * `VehicleName` option allows you to specify separate cameras for individual vehicles. If the `Cameras` element isn't present, `Scene` image from the default camera of each vehicle will be recorded.
     * If you don't want to record any images and just the vehicle's physics data, then specify the `Cameras` element but leave it empty, like this: `"Cameras": []`
@@ -321,7 +330,7 @@ Furthermore there are some other settings available:
 * `ExternalLocal`: When in external mode, if this is enabled the retrieved pose of the sensor will be in Local NED coordinates(from starting position from vehicle) and not converted Unreal NED coordinates which is default. Note that if `MoveWorldOrigin` in the settings.json is set to `true` the Unreal coordinates will be moved to be the same origin as the player start location and as such this may effect what coordinates are returned if set to `false`. 
 
 ### Note on ImageType element
-The `ImageType` element in JSON array determines which image type that settings applies to. The valid values are described in [ImageType section](image_apis.md#available-imagetype).
+The `ImageType` element in JSON array determines which image type that settings applies to. The valid values are described in [ImageType section](image_apis.md#available-imagetype-values).
 
 For example, `CaptureSettings` element is json array so you can add settings for multiple image types easily.
 
@@ -386,7 +395,7 @@ Each simulation mode will go through the list of vehicles specified in this sett
 
 ### Common Vehicle Setting
 - `VehicleType`: This could be either `PhysXCar`, `ArduRover` or `BoxCar` for the Car SimMode, `SimpleFlight`, `ArduCopter` or `PX4Multirotor` for the MultiRotor SimMode, `ComputerVision` for the ComputerVision SimMode and `CPHusky` or `Pioneer` for SkidVehicle SimMode. you can use There is no default value therefore this element must be specified.
-- `PawnPath`: This allows to override the pawn blueprint to use for the vehicle. For example, you may create new pawn blueprint derived from ACarPawn for a warehouse robot in your own project outside the HERCULES code and then specify its path here. See also [PawnPaths](settings.md#PawnPaths). Note that you have to specify your custom pawn blueprint class path inside the global `PawnPaths` object using your proprietarily defined object name, and quote that name inside the `Vehicles` setting. For example,
+- `PawnPath`: This allows to override the pawn blueprint to use for the vehicle. For example, you may create new pawn blueprint derived from ACarPawn for a warehouse robot in your own project outside the HERCULES code and then specify its path here. See also [PawnPaths](#pawnpaths). Note that you have to specify your custom pawn blueprint class path inside the global `PawnPaths` object using your proprietarily defined object name, and quote that name inside the `Vehicles` setting. For example,
 ```json
     {
       ...
@@ -407,8 +416,9 @@ Each simulation mode will go through the list of vehicles specified in this sett
 - `RC`: This sub-element allows to specify which remote controller to use for vehicle using `RemoteControlID`. The value of -1 means use keyboard (not supported yet for multirotors). The value >= 0 specifies one of many remote controllers connected to the system. The list of available RCs can be seen in Game Controllers panel in Windows, for example.
 - `X, Y, Z, Yaw, Roll, Pitch`: These elements allows you to specify the initial position and orientation of the vehicle. Position is in NED coordinates in SI units with origin set to Player Start location in Unreal environment. The orientation is specified in degrees.
 - `Sensors`: This element specifies the sensors associated with the vehicle, see [Sensors](sensors.md) page for details.
+- `Urdf`: Written by the URDF importer for robots imported from a URDF: the visual manifest the pawn is dressed with (`Visuals`), the robot description ROS 2 publishes (`RobotDescription`), whether the stock pawn mesh is hidden (`HideBaseMesh`) or back faces drawn (`TwoSided`), and the sensors whose TF frames the robot description provides (`SensorFrames`). See [Importing a URDF Robot](urdf_import.md#the-urdf-settings-block).
 - `IsFpvVehicle`: This setting allows to specify which vehicle camera will follow and the view that will be shown when ViewMode is set to Fpv. By default, HERCULES selects the first vehicle in settings as FPV vehicle.
-- `Cameras`: This element specifies camera settings for vehicle. The key in this element is name of the [available camera](image_apis.md#available_cameras) and the value is same as `CameraDefaults` as described above. For example, to change FOV for the front center camera to 120 degrees, you can use this for `Vehicles` setting:
+- `Cameras`: This element specifies camera settings for vehicle. The key in this element is name of the [available camera](image_apis.md#available-cameras) and the value is same as `CameraDefaults` as described above. For example, to change FOV for the front center camera to 120 degrees, you can use this for `Vehicles` setting:
 
 ```json
 "Vehicles": {

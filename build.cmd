@@ -10,12 +10,12 @@ set "buildMode="
 REM //check VS version
 if "%VisualStudioVersion%" == "" (
     echo(
-    echo oh oh... You need to run this command from x64 Native Tools Command Prompt for VS 2022.
+    echo oh oh... You need to run this command from x64 Native Tools Command Prompt for VS 2026.
     goto :buildfailed_nomsg
 )
 if "%VisualStudioVersion%" lss "17.0" (
     echo(
-    echo Hello there! We just upgraded AirSim to Unreal Engine 5.2.1 and Visual Studio 2022.
+    echo Hello there! We just upgraded AirSim to Unreal Engine 5.8 and Visual Studio 2026.
     echo Here are few easy steps for upgrade so everything is new and shiny:
     echo https://github.com/Cosys-Lab/Cosys-AirSim/blob/main/docs/unreal_upgrade.md
     goto :buildfailed_nomsg
@@ -65,7 +65,7 @@ if ERRORLEVEL 1 (
 REM //---------- get rpclib ----------
 IF NOT EXIST external\rpclib mkdir external\rpclib
 
-set RPC_VERSION_FOLDER=rpclib-2.3.0
+set RPC_VERSION_FOLDER=rpclib-2.3.1
 IF NOT EXIST external\rpclib\%RPC_VERSION_FOLDER% (
     REM //leave some blank lines because %powershell% shows download banner at top of console
     ECHO(
@@ -76,9 +76,9 @@ IF NOT EXIST external\rpclib\%RPC_VERSION_FOLDER% (
     ECHO *****************************************************************************************
     @echo on
     if "%PWSHV7%" == "" (
-        %powershell% -command "& { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; iwr https://github.com/rpclib/rpclib/archive/v2.3.0.zip -OutFile external\rpclib.zip }"
+        %powershell% -command "& { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; iwr https://github.com/WouterJansen/rpclib/archive/refs/tags/v2.3.1.zip -OutFile external\rpclib.zip }"
     ) else (
-        %powershell% -command "iwr https://github.com/rpclib/rpclib/archive/v2.3.0.zip -OutFile external\rpclib.zip"
+        %powershell% -command "iwr https://github.com/WouterJansen/rpclib/archive/refs/tags/v2.3.1.zip -OutFile external\rpclib.zip"
     )
     @echo off
     
@@ -96,10 +96,19 @@ IF NOT EXIST external\rpclib\%RPC_VERSION_FOLDER% (
 )
 
 REM //---------- Build rpclib ------------
+REM //optionally pin the exact MSVC toolset (e.g. if the latest installed one is newer than UE supports)
+REM //set AIRSIM_VCTOOLSVERSION=14.38.33130 before running this script, or see docs/install_windows.md FAQ
+set "CMAKE_TOOLSET_ARG="
+set "MSBUILD_TOOLSET_ARG="
+if NOT "%AIRSIM_VCTOOLSVERSION%" == "" (
+    set "CMAKE_TOOLSET_ARG=-T version=%AIRSIM_VCTOOLSVERSION%"
+    set "MSBUILD_TOOLSET_ARG=/p:VCToolsVersion=%AIRSIM_VCTOOLSVERSION%"
+)
+
 ECHO Starting cmake to build rpclib...
 IF NOT EXIST external\rpclib\%RPC_VERSION_FOLDER%\build mkdir external\rpclib\%RPC_VERSION_FOLDER%\build
 cd external\rpclib\%RPC_VERSION_FOLDER%\build
-cmake -G"Visual Studio 17 2022" ..
+cmake -G"Visual Studio 17 2022" %CMAKE_TOOLSET_ARG% ..
 
 if "%buildMode%" == "" (
 cmake --build . 
@@ -149,8 +158,9 @@ IF NOT EXIST Unreal\Plugins\AirSim\Content\VehicleAdv\SUV\v1.2.0 (
             %powershell% -command "iwr https://github.com/Cosys-Lab/Cosys-AirSim/releases/download/carassets/cosys_car_assets.zip -OutFile suv_download_tmp\car_assets.zip"
         )
         @echo off
-        rmdir /S /Q Unreal\Plugins\AirSim\Content\VehicleAdv\SUV
-        %powershell% -command "Expand-Archive -Path suv_download_tmp\car_assets.zip -DestinationPath Unreal\Plugins\AirSim\Content\VehicleAdv"
+        REM //Overwrite in place instead of deleting SUV\ first: HERCULES keeps its UGV/Husky
+        REM //assets (UGVPawn, UGVWheel*, CPHuskyMountedBar) in the same folder.
+        %powershell% -command "Expand-Archive -Force -Path suv_download_tmp\car_assets.zip -DestinationPath Unreal\Plugins\AirSim\Content\VehicleAdv"
         rmdir suv_download_tmp /q /s
         
         REM //Don't fail the build if the high-poly car is unable to be downloaded
@@ -165,9 +175,9 @@ REM //---------- get Eigen library ----------
 IF NOT EXIST AirLib\deps mkdir AirLib\deps
 IF NOT EXIST AirLib\deps\eigen3 (
     if "%PWSHV7%" == "" (
-        %powershell% -command "& { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; iwr https://gitlab.com/libeigen/eigen/-/archive/3.3.7/eigen-3.3.7.zip -OutFile eigen3.zip }"
+        %powershell% -command "& { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; iwr https://github.com/WouterJansen/eigen/archive/refs/tags/3.4.1r.zip -OutFile eigen3.zip }"
     ) else (
-        %powershell% -command "iwr https://gitlab.com/libeigen/eigen/-/archive/3.3.7/eigen-3.3.7.zip -OutFile eigen3.zip"
+        %powershell% -command "iwr https://github.com/WouterJansen/eigen/archive/refs/tags/3.4.1r.zip -OutFile eigen3.zip"
     )
     %powershell% -command "Expand-Archive -Path eigen3.zip -DestinationPath AirLib\deps"
     %powershell% -command "Move-Item -Path AirLib\deps\eigen* -Destination AirLib\deps\del_eigen"
@@ -182,12 +192,12 @@ IF NOT EXIST AirLib\deps\eigen3 goto :buildfailed
 
 REM //---------- now we have all dependencies to compile AirSim.sln which will also compile MavLinkCom ----------
 if "%buildMode%" == "" (
-msbuild -maxcpucount:12 /p:Platform=x64 /p:Configuration=Debug AirSim.sln
+msbuild -maxcpucount:12 /p:Platform=x64 /p:Configuration=Debug %MSBUILD_TOOLSET_ARG% AirSim.sln
 if ERRORLEVEL 1 goto :buildfailed
-msbuild -maxcpucount:12 /p:Platform=x64 /p:Configuration=Release AirSim.sln 
+msbuild -maxcpucount:12 /p:Platform=x64 /p:Configuration=Release %MSBUILD_TOOLSET_ARG% AirSim.sln
 if ERRORLEVEL 1 goto :buildfailed
 ) else (
-msbuild -maxcpucount:12 /p:Platform=x64 /p:Configuration=%buildMode% AirSim.sln
+msbuild -maxcpucount:12 /p:Platform=x64 /p:Configuration=%buildMode% %MSBUILD_TOOLSET_ARG% AirSim.sln
 if ERRORLEVEL 1 goto :buildfailed
 )
 

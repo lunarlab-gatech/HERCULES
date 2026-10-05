@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
+  <asset>
+    <unit name="centimeter" meter="0.01"/>
+    <up_axis>Y_UP</up_axis>
+  </asset>
+  <library_effects>
+    <effect id="red-effect">
+      <profile_COMMON>
+        <technique sid="common">
+          <phong>
+            <diffuse><color>0.8 0.1 0.1 1</color></diffuse>
+          </phong>
+        </technique>
+      </profile_COMMON>
+    </effect>
+  </library_effects>
+  <library_materials>
+    <material id="red" name="red"><instance_effect url="#red-effect"/></material>
+  </library_materials>
+  <library_geometries>
+    <geometry id="tet">
+      <mesh>
+        <source id="tet-pos">
+          <float_array id="tet-pos-array" count="12">0 0 0  10 0 0  0 10 0  0 0 10</float_array>
+          <technique_common>
+            <accessor source="#tet-pos-array" count="4" stride="3">
+              <param name="X" type="float"/><param name="Y" type="float"/><param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="tet-nrm">
+          <float_array id="tet-nrm-array" count="3">0 0 1</float_array>
+          <technique_common>
+            <accessor source="#tet-nrm-array" count="1" stride="3">
+              <param name="X" type="float"/><param name="Y" type="float"/><param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <vertices id="tet-vtx"><input semantic="POSITION" source="#tet-pos"/></vertices>
+        <triangles material="mat0" count="3">
+          <input semantic="VERTEX" source="#tet-vtx" offset="0"/>
+          <input semantic="NORMAL" source="#tet-nrm" offset="1"/>
+          <p>0 0 2 0 1 0  0 0 1 0 3 0  0 0 3 0 2 0</p>
+        </triangles>
+        <polylist material="mat0" count="1">
+          <input semantic="VERTEX" source="#tet-vtx" offset="0"/>
+          <input semantic="NORMAL" source="#tet-nrm" offset="1"/>
+          <vcount>3</vcount>
+          <p>1 0 2 0 3 0</p>
+        </polylist>
+      </mesh>
+    </geometry>
+  </library_geometries>
+  <library_visual_scenes>
+    <visual_scene id="scene">
+      <node id="left">
+        <translate>0 0 0</translate>
+        <instance_geometry url="#tet">
+          <bind_material><technique_common>
+            <instance_material symbol="mat0" target="#red"/>
+          </technique_common></bind_material>
+        </instance_geometry>
+      </node>
+      <node id="right">
+        <matrix>-1 0 0 -20  0 1 0 0  0 0 1 0  0 0 0 1</matrix>
+        <instance_geometry url="#tet">
+          <bind_material><technique_common>
+            <instance_material symbol="mat0" target="#red"/>
+          </technique_common></bind_material>
+        </instance_geometry>
+      </node>
+    </visual_scene>
+  </library_visual_scenes>
+  <scene><instance_visual_scene url="#scene"/></scene>
+</COLLADA>

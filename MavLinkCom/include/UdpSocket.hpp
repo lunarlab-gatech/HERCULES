@@ -1,6 +1,7 @@
 #ifndef MavLinkCom_UdpSocket_hpp
 #define MavLinkCom_UdpSocket_hpp
 
+#include <cstdint>
 #include <string>
 #include <memory>
 

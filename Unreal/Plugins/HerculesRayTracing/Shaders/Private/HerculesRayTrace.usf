@@ -1,0 +1,108 @@
+// Casts sensor rays against the scene's ray tracing structure (see FHerculesGpuRayCaster)
+
+#include "/Engine/Private/Common.ush"
+#include "/Engine/Private/SceneData.ush"
+#include "/Engine/Private/RayTracing/RayTracingCommon.ush"
+#include "/Engine/Private/RayTracing/RayTracingHitGroupCommon.ush"
+#include "/Engine/Private/RayTracing/VFXTraceRay.ush"
+
+struct FHerculesRay
+{
+	float3 Origin; // relative to TranslatedOrigin
+	float MaxDistance;
+	float3 Direction;
+	float MinDistance;
+};
+
+struct FHerculesHit
+{
+	float Distance; // negative for a miss
+	uint PrimitiveComponentId;
+	float3 Normal;
+};
+
+RaytracingAccelerationStructure TLAS;
+StructuredBuffer<FHerculesRay> Rays;
+StructuredBuffer<uint> ExcludedComponentIds; // sorted
+RWStructuredBuffer<FHerculesHit> Hits;
+float3 TranslatedOrigin;
+uint RayCount;
+uint ExcludedCount;
+uint MaxRetraces;
+
+bool IsExcluded(uint ComponentId)
+{
+	uint Lo = 0;
+	uint Hi = ExcludedCount;
+	while (Lo < Hi)
+	{
+		const uint Mid = (Lo + Hi) / 2;
+		const uint Value = ExcludedComponentIds[Mid];
+		if (Value == ComponentId)
+		{
+			return true;
+		}
+		if (Value < ComponentId)
+		{
+			Lo = Mid + 1;
+		}
+		else
+		{
+			Hi = Mid;
+		}
+	}
+	return false;
+}
+
+[numthreads(THREADGROUP_SIZE, 1, 1)]
+void HerculesRayTraceCS(uint3 DispatchThreadId : SV_DispatchThreadID)
+{
+	const uint RayIndex = DispatchThreadId.x;
+	if (RayIndex >= RayCount)
+	{
+		return;
+	}
+
+	const FHerculesRay InRay = Rays[RayIndex];
+	FRayDesc Ray;
+	Ray.Origin = TranslatedOrigin + InRay.Origin;
+	Ray.Direction = InRay.Direction;
+	Ray.TMin = InRay.MinDistance;
+	Ray.TMax = InRay.MaxDistance;
+
+	FHerculesHit Hit;
+	Hit.Distance = -1.0f;
+	Hit.PrimitiveComponentId = 0;
+	Hit.Normal = 0.0f;
+
+	// Opaque surfaces only, without any-hit shaders; back faces are culled like complex collision
+	const uint RayFlags = RAY_FLAG_FORCE_OPAQUE | RAY_FLAG_CULL_BACK_FACING_TRIANGLES;
+	LOOP
+	for (uint Cast = 0; Cast <= MaxRetraces; ++Cast)
+	{
+		FVFXTracePayload Payload = (FVFXTracePayload)0;
+		VfxTraceRayInline(TLAS, RayFlags, RAY_TRACING_MASK_OPAQUE, Ray.GetNativeDesc(), Payload);
+		if (Payload.IsMiss())
+		{
+			break;
+		}
+		const FInstanceSceneData Instance = GetInstanceSceneData(Payload.GPUSceneInstanceId);
+		const uint ComponentId = GetPrimitiveData(Instance.PrimitiveId).PrimitiveComponentId;
+		if (ExcludedCount > 0 && IsExcluded(ComponentId))
+		{
+			// Pass through: cast again from just beyond this surface
+			Ray.TMin = asfloat(asuint(Payload.HitT) + 1);
+			continue;
+		}
+		Hit.Distance = Payload.HitT;
+		Hit.PrimitiveComponentId = ComponentId;
+		const float NormalLength = length(Payload.WorldNormal);
+		if (NormalLength > 0.0f)
+		{
+			const float3 Normal = Payload.WorldNormal / NormalLength;
+			Hit.Normal = dot(Normal, Ray.Direction) > 0.0f ? -Normal : Normal;
+		}
+		break;
+	}
+	Hits[RayIndex] = Hit;
+}

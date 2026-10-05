@@ -27,9 +27,13 @@ find_package(rosidl_default_runtime REQUIRED)
 find_package(octomap_msgs REQUIRED)
 find_package(octomap REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(message_filters REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(airsim_interfaces REQUIRED)
-find_package(OpenCV REQUIRED)
+# Link only the modules we use (not ${OpenCV_LIBS}, which lists every module once
+# cv_bridge has found OpenCV): opencv_viz pulls in VTK, which fails to generate
+# alongside PCL on Ubuntu 26.04 (Lyrical).
+find_package(OpenCV REQUIRED COMPONENTS core imgproc)
 
 # find_package(airsim_ros_pkgs REQUIRED)
 
@@ -46,8 +50,8 @@ find_package(OpenCV REQUIRED)
 # EXAMPLE OF HOW YOU WOULD CREATE NEW CPP ROS2 EXECUTABLE
 # add_executable(airsim_node src/airsim_node.cpp)
 # target_link_libraries(airsim_node airsim_ros AirLib)
-# ament_target_dependencies(airsim_node 
-#   rclcpp
+# target_link_libraries(airsim_node
+#   rclcpp::rclcpp
 # )
 
 
@@ -65,14 +69,15 @@ endif()
 
 
 add_executable(imu_linear_interpolator_node src/imu_linear_interpolator.cpp)
-ament_target_dependencies(imu_linear_interpolator_node
-  rclcpp
-  std_msgs
-  sensor_msgs
-  geometry_msgs
-  tf2
-  tf2_ros
-  tf2_sensor_msgs
+target_link_libraries(imu_linear_interpolator_node
+  rclcpp::rclcpp
+  Eigen3::Eigen
+  ${std_msgs_TARGETS}
+  ${sensor_msgs_TARGETS}
+  ${geometry_msgs_TARGETS}
+  tf2::tf2
+  tf2_ros::tf2_ros
+  tf2_sensor_msgs::tf2_sensor_msgs
 )
 
 install(TARGETS
@@ -82,14 +87,15 @@ install(TARGETS
 
 
 add_executable(imu_linear_interpolator_v2_node src/imu_linear_interpolator_v2.cpp)
-ament_target_dependencies(imu_linear_interpolator_v2_node
-  rclcpp
-  std_msgs
-  sensor_msgs
-  geometry_msgs
-  tf2
-  tf2_ros
-  tf2_sensor_msgs
+target_link_libraries(imu_linear_interpolator_v2_node
+  rclcpp::rclcpp
+  Eigen3::Eigen
+  ${std_msgs_TARGETS}
+  ${sensor_msgs_TARGETS}
+  ${geometry_msgs_TARGETS}
+  tf2::tf2
+  tf2_ros::tf2_ros
+  tf2_sensor_msgs::tf2_sensor_msgs
 )
 
 install(DIRECTORY launch
@@ -106,17 +112,22 @@ install(TARGETS
 # depth viewing node______________
 add_executable(view_depthperspective_pointcloud_node
  src/view_depthperspective_pointcloud.cpp)
-ament_target_dependencies(view_depthperspective_pointcloud_node
-
-  rclcpp
-  std_msgs
-  sensor_msgs
-  geometry_msgs
-  tf2
-  tf2_ros
-  tf2_sensor_msgs
-  cv_bridge
+target_link_libraries(view_depthperspective_pointcloud_node
+  rclcpp::rclcpp
+  ${std_msgs_TARGETS}
+  ${sensor_msgs_TARGETS}
+  ${geometry_msgs_TARGETS}
+  tf2::tf2
+  tf2_ros::tf2_ros
+  tf2_sensor_msgs::tf2_sensor_msgs
+  cv_bridge::cv_bridge
+  message_filters::message_filters
 )
+if(message_filters_VERSION VERSION_LESS 5.0.0)
+  # Jazzy and older
+  target_compile_definitions(view_depthperspective_pointcloud_node
+    PRIVATE USE_OLD_RMW_QOS_MESSAGE_FILTERS=1)
+endif()
 
 install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}/
@@ -131,31 +142,29 @@ install(TARGETS
 # thermal image node___________________
 add_executable(thermal_image_node
  src/thermal_image_node.cpp)
-ament_target_dependencies(thermal_image_node
-
-  rclcpp
-  std_msgs
-  sensor_msgs
-  geometry_msgs
-  tf2
-  tf2_ros
-  tf2_sensor_msgs
-  cv_bridge
+target_link_libraries(thermal_image_node
+  rclcpp::rclcpp
+  ${std_msgs_TARGETS}
+  ${sensor_msgs_TARGETS}
+  ${geometry_msgs_TARGETS}
+  tf2::tf2
+  tf2_ros::tf2_ros
+  tf2_sensor_msgs::tf2_sensor_msgs
+  cv_bridge::cv_bridge
 )
 
 # thermal image segmentation based node___________________
 add_executable(thermal_image_segmentation_based_node
  src/thermal_image_segmentation_based_node.cpp)
-ament_target_dependencies(thermal_image_segmentation_based_node
-
-  rclcpp
-  std_msgs
-  sensor_msgs
-  geometry_msgs
-  tf2
-  tf2_ros
-  tf2_sensor_msgs
-  cv_bridge
+target_link_libraries(thermal_image_segmentation_based_node
+  rclcpp::rclcpp
+  ${std_msgs_TARGETS}
+  ${sensor_msgs_TARGETS}
+  ${geometry_msgs_TARGETS}
+  tf2::tf2
+  tf2_ros::tf2_ros
+  tf2_sensor_msgs::tf2_sensor_msgs
+  cv_bridge::cv_bridge
 )
 
 
@@ -173,17 +182,17 @@ thermal_image_segmentation_based_node
 # bag timestamp checker node______
 add_executable(bag_timestamp_checker_node
  src/bag_timestamp_checker.cpp)
- ament_target_dependencies(bag_timestamp_checker_node
- rclcpp
- std_msgs
- sensor_msgs
- geometry_msgs
- nav_msgs
- tf2
- tf2_ros
- tf2_sensor_msgs
- cv_bridge
- airsim_interfaces
+ target_link_libraries(bag_timestamp_checker_node
+  rclcpp::rclcpp
+  ${std_msgs_TARGETS}
+  ${sensor_msgs_TARGETS}
+  ${geometry_msgs_TARGETS}
+  ${nav_msgs_TARGETS}
+  tf2::tf2
+  tf2_ros::tf2_ros
+  tf2_sensor_msgs::tf2_sensor_msgs
+  cv_bridge::cv_bridge
+  ${airsim_interfaces_TARGETS}
 )
 
 
@@ -200,17 +209,17 @@ bag_timestamp_checker_node
 # topic time sync checker node__________________
 add_executable(topic_time_sync_checker_node
  src/topic_time_sync_checker.cpp)
- ament_target_dependencies(topic_time_sync_checker_node
- rclcpp
- std_msgs
- sensor_msgs
- geometry_msgs
- nav_msgs
- tf2
- tf2_ros
- tf2_sensor_msgs
- cv_bridge
- airsim_interfaces
+ target_link_libraries(topic_time_sync_checker_node
+  rclcpp::rclcpp
+  ${std_msgs_TARGETS}
+  ${sensor_msgs_TARGETS}
+  ${geometry_msgs_TARGETS}
+  ${nav_msgs_TARGETS}
+  tf2::tf2
+  tf2_ros::tf2_ros
+  tf2_sensor_msgs::tf2_sensor_msgs
+  cv_bridge::cv_bridge
+  ${airsim_interfaces_TARGETS}
 )
 
 
@@ -227,17 +236,17 @@ topic_time_sync_checker_node
 # imu republisher node_________________________
 add_executable(imu_republisher_node
  src/imu_republisher_node.cpp)
- ament_target_dependencies(imu_republisher_node
- rclcpp
- std_msgs
- sensor_msgs
- geometry_msgs
- nav_msgs
- tf2
- tf2_ros
- tf2_sensor_msgs
- cv_bridge
- airsim_interfaces
+ target_link_libraries(imu_republisher_node
+  rclcpp::rclcpp
+  ${std_msgs_TARGETS}
+  ${sensor_msgs_TARGETS}
+  ${geometry_msgs_TARGETS}
+  ${nav_msgs_TARGETS}
+  tf2::tf2
+  tf2_ros::tf2_ros
+  tf2_sensor_msgs::tf2_sensor_msgs
+  cv_bridge::cv_bridge
+  ${airsim_interfaces_TARGETS}
 )
 
 install(DIRECTORY launch
@@ -253,19 +262,19 @@ imu_republisher_node
 # downsample and synchronize topics node_______
 add_executable(downsample_synchronizer_node
  src/downsample_synchronizer_node.cpp)
- ament_target_dependencies(downsample_synchronizer_node
- rclcpp
- std_msgs
- sensor_msgs
- geometry_msgs
- nav_msgs
- tf2
- tf2_ros
- tf2_sensor_msgs
- cv_bridge
- airsim_interfaces
- cv_bridge 
- OpenCV 
+ target_link_libraries(downsample_synchronizer_node
+  rclcpp::rclcpp
+  ${std_msgs_TARGETS}
+  ${sensor_msgs_TARGETS}
+  ${geometry_msgs_TARGETS}
+  ${nav_msgs_TARGETS}
+  tf2::tf2
+  tf2_ros::tf2_ros
+  tf2_sensor_msgs::tf2_sensor_msgs
+  cv_bridge::cv_bridge
+  ${airsim_interfaces_TARGETS}
+  opencv_core
+  opencv_imgproc
 )
 
 install(DIRECTORY launch

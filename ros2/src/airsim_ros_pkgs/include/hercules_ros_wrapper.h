@@ -12,6 +12,7 @@ STRICT_MODE_OFF // todo what does this do?
 #include "sensors/lidar/LidarSimpleParams.hpp"
 #include "sensors/lidar/GPULidarSimpleParams.hpp"
 #include "sensors/echo/EchoSimpleParams.hpp"
+#include "sensors/distance/DistanceSimpleParams.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "sensors/imu/ImuBase.hpp"
 #include "vehicles/multirotor/api/MultirotorRpcLibClient.hpp"
@@ -39,7 +40,7 @@ STRICT_MODE_OFF // todo what does this do?
 #include <airsim_interfaces/msg/string_array.hpp>
 #include <airsim_interfaces/msg/environment.hpp>
 #include <chrono>
-#include <cv_bridge/cv_bridge.h>
+#include <cv_bridge/cv_bridge.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include <geometry_msgs/msg/twist.hpp>
@@ -66,14 +67,15 @@ STRICT_MODE_OFF // todo what does this do?
 #include <sensor_msgs/msg/range.hpp>
 #include <rosgraph_msgs/msg/clock.hpp>
 #include <std_srvs/srv/empty.hpp>
-#include <tf2/LinearMath/Matrix3x3.h>
-#include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Matrix3x3.hpp>
+#include <tf2/LinearMath/Quaternion.hpp>
+#include <set>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/static_transform_broadcaster.h>
-#include <tf2_ros/transform_broadcaster.h>
-#include <tf2_ros/transform_listener.h>
-#include <tf2/convert.h>
+#include <tf2_ros/buffer.hpp>
+#include <tf2_ros/static_transform_broadcaster.hpp>
+#include <tf2_ros/transform_broadcaster.hpp>
+#include <tf2_ros/transform_listener.hpp>
+#include <tf2/convert.hpp>
 #include <unordered_map>
 #include <memory>
 #include <cstring>
@@ -143,6 +145,7 @@ class AirsimROSWrapper
     using CameraSetting = msr::airlib::AirSimSettings::CameraSetting;
     using CaptureSetting = msr::airlib::AirSimSettings::CaptureSetting;
     using LidarSetting = msr::airlib::AirSimSettings::LidarSetting;
+    using DistanceSetting = msr::airlib::AirSimSettings::DistanceSetting;
     using GPULidarSetting = msr::airlib::AirSimSettings::GPULidarSetting;
     using EchoSetting = msr::airlib::AirSimSettings::EchoSetting;
     using VehicleSetting = msr::airlib::AirSimSettings::VehicleSetting;
@@ -223,6 +226,13 @@ private:
         rclcpp::Time stamp_;
 
         std::string odom_frame_id_;
+
+        // odometry is reported relative to the pose of the first state update
+        bool init_odom_received_ = false;
+        nav_msgs::msg::Odometry init_odom_msg_;
+
+        // static transforms go out once, at the first state update
+        bool static_tf_published_ = false;
     };
 
     class CarROS : public VehicleROS
@@ -259,7 +269,7 @@ private:
         rclcpp::Service<airsim_interfaces::srv::Takeoff>::SharedPtr takeoff_srvr_;
         rclcpp::Service<airsim_interfaces::srv::Land>::SharedPtr land_srvr_;
 
-        bool has_vel_cmd_;
+        bool has_vel_cmd_ = false;
         VelCmd vel_cmd_;
     };
 
@@ -280,6 +290,8 @@ private:
 
     void vel_cmd_all_world_frame_cb(const airsim_interfaces::msg::VelCmd::SharedPtr msg);
     void vel_cmd_all_body_frame_cb(const airsim_interfaces::msg::VelCmd::SharedPtr msg);
+    // The named drone of this bridge, or nullptr (with a warning) for any other name.
+    MultiRotorROS *find_drone_for_command(const std::string &vehicle_name);
 
     // void vel_cmd_body_frame_cb(const airsim_interfaces::msg::VelCmd& msg, const std::string& vehicle_name);
     void gimbal_angle_quat_cmd_cb(const airsim_interfaces::msg::GimbalAngleQuatCmd::SharedPtr gimbal_angle_quat_cmd_msg);
@@ -309,7 +321,7 @@ private:
     void publish_odom_tf(const nav_msgs::msg::Odometry &odom_msg);
 
     /// camera helper methods
-    sensor_msgs::msg::CameraInfo generate_cam_info(const std::string &camera_name, const CameraSetting &camera_setting, const CaptureSetting &capture_setting) const;
+    sensor_msgs::msg::CameraInfo generate_cam_info(const std::string &frame_id, const CameraSetting &camera_setting, const CaptureSetting &capture_setting) const;
 
     std::shared_ptr<sensor_msgs::msg::Image> get_img_msg_from_response(const ImageResponse &img_response, const rclcpp::Time curr_ros_time, const std::string frame_id);
     std::shared_ptr<sensor_msgs::msg::Image> get_depth_img_msg_from_response(const ImageResponse &img_response, const rclcpp::Time curr_ros_time, const std::string frame_id);
@@ -324,6 +336,11 @@ private:
     void append_static_lidar_tf(VehicleROS *vehicle_ros, const std::string &lidar_name, const msr::airlib::LidarSimpleParams &lidar_setting);
     void append_static_gpulidar_tf(VehicleROS *vehicle_ros, const std::string &gpulidar_name, const msr::airlib::GPULidarSimpleParams &gpulidar_setting);
     void append_static_echo_tf(VehicleROS *vehicle_ros, const std::string &echo_name, const msr::airlib::EchoSimpleParams &echo_setting);
+    void append_static_distance_tf(VehicleROS *vehicle_ros, const std::string &distance_name, const msr::airlib::DistanceSimpleParams &distance_setting);
+
+    // In the Hero sim mode each wrapper instance serves one vehicle family
+    // (multirotors on 41451, cars on 41452), chosen by VehicleType.
+    bool serves_vehicle(const VehicleSetting &vehicle_setting) const;
     void append_static_vehicle_tf(VehicleROS *vehicle_ros, const VehicleSetting &vehicle_setting);
     void set_nans_to_zeros_in_pose(VehicleSetting &vehicle_setting) const;
     void set_nans_to_zeros_in_pose(const VehicleSetting &vehicle_setting, CameraSetting &camera_setting) const;
@@ -424,9 +441,8 @@ private:
     // todo for multiple drones with multiple sensors, this won't scale. make it a part of VehicleROS?
 
     std::mutex control_mutex_;
-
-    bool init_odom_received_ = false;          // becomes true after first odom‐tick
-    nav_msgs::msg::Odometry init_odom_msg_;   // stores that very‐first Odometry
+    // Guards curr_drone_state_, which body-frame velocity callbacks read.
+    std::mutex vehicle_state_mutex_;
 
     // gimbal control
     bool has_gimbal_cmd_;
@@ -437,6 +453,9 @@ private:
     std::string world_frame_id_ = AIRSIM_FRAME_ID;
     const std::string AIRSIM_ODOM_FRAME_ID = "odom_local";
     std::string odom_frame_id_ = AIRSIM_ODOM_FRAME_ID;
+    // Prefix for every topic/service; "~" (default) is this node's own name. Two bridges with
+    // different node names can share one prefix, e.g. the Hero UAV and UGV bridges.
+    std::string topic_ns_ = "~";
     std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
     std::shared_ptr<tf2_ros::StaticTransformBroadcaster> static_tf_pub_;
 

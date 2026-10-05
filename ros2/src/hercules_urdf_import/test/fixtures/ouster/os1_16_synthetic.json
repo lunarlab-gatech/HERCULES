@@ -1,0 +1,58 @@
+{
+  "sensor_info": {
+    "prod_line": "OS-1-16",
+    "prod_sn": "000000000000",
+    "image_rev": "synthetic"
+  },
+  "config_params": {
+    "lidar_mode": "1024x10",
+    "udp_profile_lidar": "RNG19_RFL8_SIG16_NIR16"
+  },
+  "lidar_data_format": {
+    "columns_per_frame": 1024,
+    "pixels_per_column": 16,
+    "column_window": [
+      0,
+      1023
+    ]
+  },
+  "beam_intrinsics": {
+    "beam_altitude_angles": [
+      15.379,
+      13.236,
+      11.128,
+      9.03,
+      6.947,
+      4.873,
+      2.825,
+      0.786,
+      -1.257,
+      -3.284,
+      -5.319,
+      -7.373,
+      -9.426,
+      -11.494,
+      -13.584,
+      -15.703
+    ],
+    "beam_azimuth_angles": [
+      3.12,
+      0.92,
+      -1.32,
+      -3.54,
+      3.12,
+      0.92,
+      -1.32,
+      -3.54,
+      3.12,
+      0.92,
+      -1.32,
+      -3.54,
+      3.12,
+      0.92,
+      -1.32,
+      -3.54
+    ],
+    "lidar_origin_to_beam_origin_mm": 15.806
+  }
+}

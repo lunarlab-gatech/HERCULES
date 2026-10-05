@@ -1,6 +1,6 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.hpp>
-#include <cv_bridge/cv_bridge.h>
+#include <cv_bridge/cv_bridge.hpp>
 
 #include <opencv2/opencv.hpp>
 
@@ -49,8 +49,8 @@ public:
         declare_parameter("thermal_topic",
                           std::string("/hercules_node/Drone1/front_center_ThermalIR/image"));
 
-        declare_parameter("label_map_csv",
-                          std::string("/home/sgarimella34/multi-robot-coordination/Cosys-AirSim/PythonClient/segmentation/label_color_map_ausenvkangaroos.csv"));
+        // Label,ObjectName,SegmentationID,R,G,B rows for the environment in use
+        declare_parameter("label_map_csv", std::string(""));
 
         get_parameter("scene_topic", scene_topic_);
         get_parameter("seg_topic", seg_topic_);
@@ -224,6 +224,13 @@ private:
     // Build mapping: (R,G,B) -> ThermalProfile
     void loadLabelMap(const std::string &csv_path)
     {
+        if (csv_path.empty())
+        {
+            RCLCPP_WARN(get_logger(),
+                        "No label_map_csv parameter (a Label,ObjectName,SegmentationID,R,G,B "
+                        "file for the environment): every object gets the default thermal profile");
+            return;
+        }
         std::ifstream file(csv_path);
         if (!file.is_open())
         {

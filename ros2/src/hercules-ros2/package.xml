@@ -3,9 +3,9 @@
 <package format="3">
   <name>hercules-ros2</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>HERCULES ROS 2 utilities: IMU interpolation and republishing, topic downsampling and synchronization, timing checks, depth point clouds and thermal / night-vision image post-processing.</description>
   <maintainer email="sgarimella34@gatech.edu">sgarimella34@gatech.edu</maintainer>
-  <license>TODO: License declaration</license>
+  <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <!-- <buildtool_depend>ament_cmake_python</buildtool_depend> -->
@@ -19,6 +19,7 @@
   <depend>tf2_ros</depend>
   <depend>tf2_geometry_msgs</depend>
   <depend>tf2_sensor_msgs</depend>
+  <depend>message_filters</depend>
   <depend>image_transport</depend>
   <depend>mavros_msgs</depend>
   <depend>geographic_msgs</depend>
@@ -27,7 +28,7 @@
   <depend>rosidl_default_generators</depend>
   <depend>rosidl_default_runtime</depend>
   <depend>octomap_msgs</depend>
-  <depend>octomap</depend>
+  <depend>liboctomap-dev</depend>
   <depend>airsim_interfaces</depend>
   <!-- <depend>cv_bridge</depend> -->
 
@@ -37,7 +38,7 @@
   <exec_depend>launch</exec_depend>
   <exec_depend>rclpy</exec_depend>
   <exec_depend>cv_bridge</exec_depend>
-  <exec_depend>opencv-python</exec_depend>
+  <exec_depend>python3-opencv</exec_depend>
 
 
   <export>

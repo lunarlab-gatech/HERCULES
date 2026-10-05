@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 
+import signal
+
 import rclpy
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
+from rclpy.signals import SignalHandlerOptions
 from nav_msgs.msg import OccupancyGrid
 from geometry_msgs.msg import Quaternion
 import yaml
@@ -118,10 +122,17 @@ class MapPublisher(Node):
     def publish_map(self):
         self.occupancy_grid.header.stamp = self.get_clock().now().to_msg()
         self.publisher.publish(self.occupancy_grid)
-        self.get_logger().info("Published occupancy grid map on configured topic")
+        self.get_logger().info(f"Publishing occupancy grid map on {self.publisher.topic_name}", once=True)
 
 def main(args=None):
-    rclpy.init(args=args)
+    def interrupt_once(signum, frame):
+        # Under ros2 launch, Ctrl-C reaches this process from the terminal and from launch;
+        # only the first one may interrupt, so the cleanup below completes.
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        raise KeyboardInterrupt
+
+    signal.signal(signal.SIGINT, interrupt_once)
+    rclpy.init(args=args, signal_handler_options=SignalHandlerOptions.NO)
     node = MapPublisher()
 
     if not node.continuous_publish:
@@ -134,10 +145,11 @@ def main(args=None):
     # If continuous, keep spinning
     try:
         rclpy.spin(node)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
     finally:
         node.destroy_node()
-        if rclpy.ok():
-            rclpy.shutdown()
+        rclpy.try_shutdown()
 
 if __name__ == '__main__':
     main()

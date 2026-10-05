@@ -2,7 +2,7 @@
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>rviz_imu_plugin</name>
-  <version>2.1.5</version>
+  <version>2.2.2</version>
   <description>
     RVIZ plugin for IMU visualization
   </description>
@@ -13,7 +13,8 @@
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <build_depend>qtbase5-dev</build_depend>
+  <build_depend condition="$ROS_DISTRO != lyrical and $ROS_DISTRO != rolling">qtbase5-dev</build_depend>
+  <build_depend condition="$ROS_DISTRO == lyrical or $ROS_DISTRO == rolling">qt6-base-dev</build_depend>
 
   <depend>message_filters</depend>
   <depend>pluginlib</depend>
@@ -25,10 +26,14 @@
   <depend>tf2</depend>
   <depend>tf2_ros</depend>
 
-  <exec_depend>libqt5-core</exec_depend>
-  <exec_depend>libqt5-gui</exec_depend>
-  <exec_depend>libqt5-opengl</exec_depend>
-  <exec_depend>libqt5-widgets</exec_depend>
+  <exec_depend condition="$ROS_DISTRO != lyrical and $ROS_DISTRO != rolling">libqt5-core</exec_depend>
+  <exec_depend condition="$ROS_DISTRO != lyrical and $ROS_DISTRO != rolling">libqt5-gui</exec_depend>
+  <exec_depend condition="$ROS_DISTRO != lyrical and $ROS_DISTRO != rolling">libqt5-opengl</exec_depend>
+  <exec_depend condition="$ROS_DISTRO != lyrical and $ROS_DISTRO != rolling">libqt5-widgets</exec_depend>
+  <exec_depend condition="$ROS_DISTRO == lyrical or $ROS_DISTRO == rolling">libqt6-core</exec_depend>
+  <exec_depend condition="$ROS_DISTRO == lyrical or $ROS_DISTRO == rolling">libqt6gui6t64</exec_depend>
+  <exec_depend condition="$ROS_DISTRO == lyrical or $ROS_DISTRO == rolling">libqt6opengl6t64</exec_depend>
+  <exec_depend condition="$ROS_DISTRO == lyrical or $ROS_DISTRO == rolling">libqt6widgets6t64</exec_depend>
 
   <export>
     <rosdoc config="${prefix}/rosdoc.yaml"/>

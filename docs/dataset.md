@@ -11,7 +11,7 @@ HERCULES ships a **dataset-collection pipeline** that exports **time-synchronize
 
 ## Download
 
-The released sequences across the desert, forest, and city worlds are hosted on Hugging Face:
+The sequences across the desert, forest, and city worlds have their home on Hugging Face; uploading the full sequences is still on the project [roadmap](https://github.com/lunarlab-gatech/HERCULES#roadmap):
 
 [:material-database: huggingface.co/datasets/GeorgiaTech/HERCULES](https://huggingface.co/datasets/GeorgiaTech/HERCULES){ .md-button .md-button--primary }
 

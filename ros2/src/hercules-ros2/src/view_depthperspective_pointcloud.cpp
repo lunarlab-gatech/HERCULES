@@ -9,16 +9,16 @@
 #include "sensor_msgs/msg/camera_info.hpp"
 #include "sensor_msgs/msg/point_cloud2.hpp"
 #include "sensor_msgs/msg/point_field.hpp"
-#include <cv_bridge/cv_bridge.h>
+#include <cv_bridge/cv_bridge.hpp>
 #include <sensor_msgs/image_encodings.hpp>
-#include <message_filters/subscriber.h>
-#include <message_filters/sync_policies/approximate_time.h>
-#include <message_filters/synchronizer.h>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2/LinearMath/Matrix3x3.h>
-#include <tf2/LinearMath/Vector3.h>
+#include <message_filters/subscriber.hpp>
+#include <message_filters/sync_policies/approximate_time.hpp>
+#include <message_filters/synchronizer.hpp>
+#include <tf2_ros/buffer.hpp>
+#include <tf2_ros/transform_listener.hpp>
+#include <tf2/LinearMath/Quaternion.hpp>
+#include <tf2/LinearMath/Matrix3x3.hpp>
+#include <tf2/LinearMath/Vector3.hpp>
 
 using namespace std::chrono_literals;
 
@@ -52,9 +52,15 @@ public:
         pc_pub_ = create_publisher<sensor_msgs::msg::PointCloud2>(output_topic, 10);
 
         // sync subs
-        depth_sub_.subscribe(this, depth_topic);
-        color_sub_.subscribe(this, color_topic);
-        info_sub_.subscribe(this, info_topic);
+#ifdef USE_OLD_RMW_QOS_MESSAGE_FILTERS
+        // Jazzy and older: message_filters only accepts rmw_qos_profile_t.
+        const auto qos = rclcpp::QoS(10).get_rmw_qos_profile();
+#else
+        const auto qos = rclcpp::QoS(10);
+#endif
+        depth_sub_.subscribe(this, depth_topic, qos);
+        color_sub_.subscribe(this, color_topic, qos);
+        info_sub_.subscribe(this, info_topic, qos);
         sync_ = std::make_shared<Sync>(Sync(10), depth_sub_, color_sub_, info_sub_);
         sync_->registerCallback(
             std::bind(&RGBDToPointCloud::callback, this, std::placeholders::_1,
@@ -219,9 +225,9 @@ private:
     double max_depth_;
     int decimation_;
 
-    message_filters::Subscriber<sensor_msgs::msg::Image> depth_sub_{this, ""};
-    message_filters::Subscriber<sensor_msgs::msg::Image> color_sub_{this, ""};
-    message_filters::Subscriber<sensor_msgs::msg::CameraInfo> info_sub_{this, ""};
+    message_filters::Subscriber<sensor_msgs::msg::Image> depth_sub_;
+    message_filters::Subscriber<sensor_msgs::msg::Image> color_sub_;
+    message_filters::Subscriber<sensor_msgs::msg::CameraInfo> info_sub_;
     using Sync = message_filters::Synchronizer<
         message_filters::sync_policies::ApproximateTime<
             sensor_msgs::msg::Image,

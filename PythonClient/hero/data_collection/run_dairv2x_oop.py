@@ -22,7 +22,8 @@ CAM_RATE   = 10
 LIDAR_RATE = 10
 DURATION_S = 300.0
 
-OUT_ROOT   = "/home/sgarimella34/multi-robot-coordination/collaborative-perception-BEVP/datasets/dair_v2x_synth/"
+# dataset output folder (env HERCULES_DAIR_V2X_OUT, default ./dair_v2x_synth)
+OUT_ROOT   = os.path.join(os.path.abspath(os.environ.get('HERCULES_DAIR_V2X_OUT', 'dair_v2x_synth')), '')
 
 IMG_EXT    = ".png"
 BASE_HZ    = CAM_RATE
@@ -415,7 +416,7 @@ def kitti_json_from_result(res, cam_pose, P, img_size):
 
 # --- PP (LiDAR) label helpers ---
 
-ABS_SETTINGS_PATH = "/home/sgarimella34/Documents/AirSim/settings.json"
+ABS_SETTINGS_PATH = H.SETTINGS_JSON_PATH  # env AIRSIM_SETTINGS
 
 
 def lidar_world_from_settings(client, vehicle_name, lidar_name, settings_path=None):

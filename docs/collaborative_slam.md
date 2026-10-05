@@ -32,4 +32,4 @@ ROMAN loop closure aligning UGV 1 and UGV 2 submaps pairwise via CLIPPER:
 
 ## Running it
 
-The evaluation runs on data exported by the HERCULES [dataset pipeline](dataset.md) and consumed through the optimized [ROS 2 wrapper](ros_cplusplus.md). See the [dataset](dataset.md) page for the sequence formats (ROS 2 bags / KITTI-style layouts).
+The evaluation runs on data exported by the HERCULES [dataset pipeline](dataset.md) and consumed through the optimized [ROS 2 wrapper](ros_cplusplus.md). See the [dataset](dataset.md) page for the sequence formats (ROS 2 bags / KITTI-style layouts). Instructions for replicating the paper's collaborative SLAM experiments are in [paper/CollaborativeSLAM.md](https://github.com/lunarlab-gatech/HERCULES/blob/main/paper/CollaborativeSLAM.md).

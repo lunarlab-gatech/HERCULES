@@ -71,6 +71,11 @@ public:
     void setCameraTypeUpdate(ImageType type, bool nodisplay, std::string annotation_name = "");
     void setCameraOrientation(const FRotator& rotator);
     void updateInstanceSegmentationAnnotation(TArray<TWeakObjectPtr<UPrimitiveComponent> >& ComponentList, bool only_hide=false);
+    // The same for the scene capture, given the components added since the previous refresh: refresh
+    // serial numbers tell whether this camera has hidden all earlier ones, otherwise all are hidden.
+    // The player's view is left to the caller.
+    void updateInstanceSegmentationAnnotation(TArray<TWeakObjectPtr<UPrimitiveComponent> >& ComponentList,
+        const TArray<TWeakObjectPtr<UPrimitiveComponent> >& NewComponents, uint64 RefreshSerial, bool only_hide=false);
     bool GetAnnotationNameExist(std::string annotation_name);
     void updateAnnotation(TArray<TWeakObjectPtr<UPrimitiveComponent> >& ComponentList, FString annotation_name, bool only_hide = false);
     void addAnnotationCamera(FString name, FObjectAnnotator::AnnotatorType type, float max_view_distance = -1.0f);
@@ -90,6 +95,7 @@ public:
     msr::airlib::Pose getPose() const;
 
 private: //members
+    uint64 instance_segmentation_serial_ = 0; // the last segmentation refresh whose components the scene capture hides
     UPROPERTY()
     UMaterialParameterCollection* distortion_param_collection_;
     UPROPERTY()

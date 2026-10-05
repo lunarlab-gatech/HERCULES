@@ -25,6 +25,14 @@
     {
       "Name": "ChaosVehiclesPlugin",
       "Enabled": true
+    },
+    {
+      "Name": "HerculesRayTracing",
+      "Enabled": true
+    },
+    {
+      "Name": "ProceduralMeshComponent",
+      "Enabled": true
     }
   ]
 }

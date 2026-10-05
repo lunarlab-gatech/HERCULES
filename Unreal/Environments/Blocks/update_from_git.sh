@@ -11,5 +11,6 @@ set -x
 
 rsync -a  --exclude 'temp' --delete ../../Plugins/AirSim Plugins/
 rsync -a  --exclude 'temp' --delete ../../../AirLib Plugins/AirSim/Source/
+rsync -a  --exclude 'temp' --exclude 'Binaries' --exclude 'Intermediate' --delete ../../Plugins/HerculesRayTracing Plugins/
 
 popd >/dev/null

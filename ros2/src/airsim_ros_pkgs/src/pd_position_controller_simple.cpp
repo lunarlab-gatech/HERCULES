@@ -35,8 +35,10 @@ bool DynamicConstraints::load_from_rosparams(const std::shared_ptr<rclcpp::Node>
 PIDPositionController::PIDPositionController(const std::shared_ptr<rclcpp::Node> nh)
     : use_eth_lib_for_geodetic_conv_(true), nh_(nh), has_home_geo_(false), reached_goal_(false), has_goal_(false), has_odom_(false), got_goal_once_(false)
 {
-    params_.load_from_rosparams(nh_);
-    constraints_.load_from_rosparams(nh_);
+    if (!params_.load_from_rosparams(nh_))
+        RCLCPP_WARN(nh_->get_logger(), "PD gains not all set; using defaults for the missing ones");
+    if (!constraints_.load_from_rosparams(nh_))
+        RCLCPP_WARN(nh_->get_logger(), "dynamic constraints not all set; using defaults for the missing ones");
     initialize_ros();
     reset_errors();
 }
@@ -338,11 +340,10 @@ void PIDPositionController::enforce_dynamic_constraints()
         // template <typename T> double sgn(T val) { return (T(0) < val) - (val < T(0)); }
         vel_cmd_.twist.linear.z = (vel_cmd_.twist.linear.z / std::fabs(vel_cmd_.twist.linear.z)) * constraints_.max_vel_vert_abs;
     }
-    // todo yaw limits
-    if (std::fabs(vel_cmd_.twist.linear.z) > constraints_.max_yaw_rate_degree) {
-        // todo just add a sgn funciton in common utils? return double to be safe.
-        // template <typename T> double sgn(T val) { return (T(0) < val) - (val < T(0)); }
-        vel_cmd_.twist.linear.z = (vel_cmd_.twist.linear.z / std::fabs(vel_cmd_.twist.linear.z)) * constraints_.max_yaw_rate_degree;
+    // the yaw rate command is in rad/s (the wrapper converts it to deg/s)
+    const double max_yaw_rate = constraints_.max_yaw_rate_degree * M_PI / 180.0;
+    if (std::fabs(vel_cmd_.twist.angular.z) > max_yaw_rate) {
+        vel_cmd_.twist.angular.z = std::copysign(max_yaw_rate, vel_cmd_.twist.angular.z);
     }
 }
 

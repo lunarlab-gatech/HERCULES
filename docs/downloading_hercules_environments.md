@@ -10,7 +10,8 @@ account and download them. This document walks through the exact steps.
 > **Coming soon:** we are also preparing pre-packaged (cooked) simulator
 > binaries of these environments, which the Fab license does permit us to
 > distribute. Once released, you will only need the steps below if you want to
-> open or modify the environments in the Unreal Editor.
+> open or modify the environments in the Unreal Editor. The packaged builds
+> released so far are listed in [Packaged Environments](packaged_environments.md).
 
 ## The three environments
 
@@ -26,8 +27,8 @@ account and download them. This document walks through the exact steps.
 - The **Epic Games Launcher** installed on a **Windows or macOS** machine.
   There is no launcher for Linux — if your workstations are Linux-based (ours
   are, see reference machine below), download on any Windows/Mac machine and
-  copy the files over (step 5). The in-editor Fab plugin is not an option
-  here because it requires UE 5.3+, while HERCULES uses **UE 5.2.1**.
+  copy the files over (step 5). HERCULES targets **UE 5.8**, so the in-editor
+  Fab plugin (UE 5.3+) is an alternative to the launcher where it is available.
 - Disk space: the City Sample is by far the largest item (tens of GB
   downloaded and expanded). We recommend having **≥ 200 GB free** before
   starting.
@@ -53,8 +54,8 @@ sure you are logged in with the same account). All three items should appear.
 
 ### 3. Engine-version note (important)
 
-HERCULES runs on **Unreal Engine 5.2.1**. If the launcher does not offer
-"5.2" in the version dropdown for a pack (some packs list only older or newer
+HERCULES targets **Unreal Engine 5.8**. If the launcher does not offer
+"5.8" in the version dropdown for a pack (some packs list only older or newer
 engine versions), use the standard workaround:
 
 1. Download the pack for the **closest supported version** into a blank
@@ -104,7 +105,7 @@ City Sample in particular benefits from GPU VRAM and RAM headroom.
 | CPU | Intel Core i9-13980HX (24 cores / 32 threads) |
 | RAM | 96 GB |
 | GPU | NVIDIA GeForce RTX 4090 Laptop GPU, 16 GB VRAM (driver 550.144) |
-| Unreal Engine | 5.2.1, built from source on Linux |
+| Unreal Engine | 5.2.1, built from source on Linux (the repository now targets UE 5.8) |
 | Storage | NVMe SSD; environments and datasets kept on external SSDs |
 
 Note that UE on Linux uses the Vulkan RHI; on Windows the same projects run

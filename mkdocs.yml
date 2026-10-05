@@ -7,6 +7,9 @@ repo_url: https://github.com/lunarlab-gatech/HERCULES
 repo_name: lunarlab-gatech/HERCULES
 edit_uri: edit/main/docs/
 
+validation:
+  anchors: warn
+
 copyright: Copyright &copy; 2026 LunarLab, Georgia Institute of Technology — built on Cosys-AirSim and AirSim (MIT).
 
 theme:
@@ -50,7 +53,6 @@ extra:
       link: https://sites.gatech.edu/lunarlab/
 
 extra_javascript:
-  - https://polyfill.io/v3/polyfill.min.js?features=es6
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
 markdown_extensions:
@@ -86,6 +88,10 @@ nav:
     - "Settings": 'settings.md'
   - "HERCULES Features":
     - "Heterogeneous UAV–UGV Autonomy": 'heterogeneous_autonomy.md'
+    - "Running a UAV–UGV Team": 'hero_team_quickstart.md'
+    - "Importing a URDF Robot": 'urdf_import.md'
+    - "Packaged Environments": 'packaged_environments.md'
+    - "Downloading the Environments from Fab": 'downloading_hercules_environments.md'
     - "LWIR Thermal Camera": 'lwir_camera.md'
     - "Night-Vision Camera": 'night_vision.md'
     - "Dynamic Environmental Phenomena":

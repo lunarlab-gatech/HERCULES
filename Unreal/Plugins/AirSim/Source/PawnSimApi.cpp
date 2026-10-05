@@ -9,6 +9,7 @@
 #include "common/ClockFactory.hpp"
 #include "PIPCamera.h"
 #include "NedTransform.h"
+#include "UrdfVisuals.h"
 #include "common/EarthUtils.hpp"
 
 #include "Materials/MaterialParameterCollectionInstance.h"
@@ -52,6 +53,10 @@ void PawnSimApi::initialize()
     setupCamerasFromSettings(params_.cameras);
     image_capture_.reset(new UnrealImageCapture(&cameras_));
 
+    //robots imported from a URDF: dress the pawn in the robot's meshes (after
+    //the bounds above were measured, and without collision)
+    FUrdfVisuals::Attach(params_.pawn, *getVehicleSetting(), getNedTransform());
+
     //add listener for pawn's collision event
     params_.pawn_events->getCollisionSignal().connect_member(this, &PawnSimApi::onCollision);
     params_.pawn_events->getPawnTickSignal().connect_member(this, &PawnSimApi::pawnTick);
@@ -69,6 +74,13 @@ void PawnSimApi::setStartPosition(const FVector& position, const FRotator& rotat
     Vector3r nedWrtOrigin = ned_transform_.toGlobalNed(initial_state_.start_location);
     home_geo_point_ = msr::airlib::EarthUtils::nedToGeodetic(nedWrtOrigin,
                                                              AirSimSettings::singleton().origin_geopoint);
+}
+
+void PawnSimApi::setHomeGeoPoint(const msr::airlib::HomeGeoPoint& origin)
+{
+    Vector3r nedWrtOrigin = ned_transform_.toGlobalNed(initial_state_.start_location);
+    home_geo_point_ = msr::airlib::EarthUtils::nedToGeodetic(nedWrtOrigin, origin);
+    environment_->setHomeGeoPoint(home_geo_point_);
 }
 
 void PawnSimApi::pawnTick(float dt)
@@ -295,12 +307,12 @@ bool PawnSimApi::testLineOfSightToPoint(const msr::airlib::GeoPoint& lla) const
             if (hit) {
                 // No LOS, so draw red line
                 FLinearColor color{ 1.0f, 0, 0, 0.4f };
-                params_.pawn->GetWorld()->LineBatcher->DrawLine(params_.pawn->GetActorLocation(), target_location, color, SDPG_World, 10, -1);
+                UAirBlueprintLib::DrawLine(params_.pawn->GetWorld(), params_.pawn->GetActorLocation(), target_location, color.ToFColor(false), SDPG_World, 10, -1);
             }
             else {
                 // Yes LOS, so draw green line
                 FLinearColor color{ 0, 1.0f, 0, 0.4f };
-                params_.pawn->GetWorld()->LineBatcher->DrawLine(params_.pawn->GetActorLocation(), target_location, color, SDPG_World, 10, -1);
+                UAirBlueprintLib::DrawLine(params_.pawn->GetWorld(), params_.pawn->GetActorLocation(), target_location, color.ToFColor(false), SDPG_World, 10, -1);
             }
         }
     },

@@ -1,0 +1,20 @@
+# Sensor config for ackermann_car.urdf (the URDF has no <gazebo> sensors).
+cameras:
+  - name: front_center
+    link: zed_left_optical
+    frame: optical
+    width: 640
+    height: 360
+    fov_deg: 100
+    image_types: [Scene, DepthPlanar, Segmentation]
+lidars:
+  - name: roof_lidar
+    link: roof
+    channels: 32
+    range: 100
+    rotations_per_second: 10
+    measurements_per_cycle: 512
+    horizontal_fov_deg: [-60, 60]
+    vertical_fov_deg: [-15, 10]
+gps:
+  - name: gps

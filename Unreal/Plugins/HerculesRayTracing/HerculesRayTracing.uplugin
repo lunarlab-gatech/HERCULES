@@ -1,0 +1,20 @@
+{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "1.0.0",
+  "FriendlyName": "HERCULES Ray Tracing",
+  "Description": "Casts sensor rays on the GPU against the scene's hardware ray tracing structure",
+  "Category": "Science",
+  "CreatedBy": "HERCULES",
+  "EnabledByDefault": true,
+  "CanContainContent": false,
+  "IsBetaVersion": true,
+  "Installed": true,
+  "Modules": [
+    {
+      "Name": "HerculesRayTracing",
+      "Type": "Runtime",
+      "LoadingPhase": "PostConfigInit"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<!-- Test fixture: stands in for a robot description package so that
+     package://test_robot_description/... URIs resolve without ROS. -->
+<package format="3">
+  <name>test_robot_description</name>
+  <version>0.0.0</version>
+  <description>URDF importer test fixture</description>
+  <maintainer email="noreply@example.com">fixture</maintainer>
+  <license>MIT</license>
+</package>

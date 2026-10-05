@@ -33,7 +33,7 @@ If you want to use C++ APIs and examples, please see [C++ APIs Guide](apis_cpp.m
 
 
 ## Hello Car
-Here's how to use HERCULES APIs using Python to control simulated car (see also [C++ example](apis_cpp.md#hello_car)):
+Here's how to use HERCULES APIs using Python to control simulated car (see also [C++ example](apis_cpp.md#hello-car)):
 
 ```python
 # ready to run example: PythonClient/car/hello_car.py
@@ -77,7 +77,7 @@ while True:
 ```
 
 ## Hello Drone
-Here's how to use HERCULES APIs using Python to control simulated quadrotor (see also [C++ example](apis_cpp.md#hello_drone)):
+Here's how to use HERCULES APIs using Python to control simulated quadrotor (see also [C++ example](apis_cpp.md#hello-drone)):
 
 ```python
 # ready to run example: PythonClient/multirotor/hello_drone.py

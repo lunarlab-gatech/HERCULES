@@ -5,12 +5,14 @@ USER root
 RUN DEBIAN_FRONTEND=noninteractive apt-get update
 
 RUN apt-get install -y --no-install-recommends \
+	git \
 	python3 \
 	python3-pip \
 	sudo
 
+# HERCULES Python client (hercules_cosysairsim), installed from the repository's PythonClient folder
 RUN python3 -m pip install --upgrade pip && \
-    pip3 install cosysairsim
+    pip3 install "git+https://github.com/lunarlab-gatech/HERCULES.git#subdirectory=PythonClient"
 
 RUN adduser --force-badname --disabled-password --gecos '' --shell /bin/bash airsim_user && \
 	echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers && \

@@ -2,7 +2,9 @@
 
 # Absolute path to your UGV executable
 # EXECUTABLE_PATH=/home/sgarimella34/multi-robot-coordination/Cosys-AirSim/build_debug/output/bin/UGVWaypointControlNumericalVelocity
-EXECUTABLE_PATH=/home/sgarimella34/multi-robot-coordination/Cosys-AirSim/build_release/output/bin/UGVWaypointControlNumericalVelocity
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Built by ./build.sh; override with EXECUTABLE_PATH=... if yours lives elsewhere.
+EXECUTABLE_PATH="${EXECUTABLE_PATH:-$SCRIPT_DIR/../build_release/output/bin/UGVWaypointControlNumericalVelocity}"
 # EXECUTABLE_PATH=/home/dellg16ssg/multi-robot-coordination/Cosys-AirSim/build_release/output/bin/UGVWaypointControlNumericalVelocity
 
 # Base path for waypoint files
@@ -15,7 +17,8 @@ EXECUTABLE_PATH=/home/sgarimella34/multi-robot-coordination/Cosys-AirSim/build_r
 # WAYPOINT_DIR="/home/dellg16ssg/multi-robot-coordination/trajectory_data/BEVP_convoy"
 
 # CSLAM random explore motion
-WAYPOINT_DIR="/home/sgarimella34/multi-robot-coordination/trajectory_data/CSLAM_random_explore"
+# Folder holding <Vehicle>_trajectory.txt files; override with WAYPOINT_DIR=...
+WAYPOINT_DIR="${WAYPOINT_DIR:-$SCRIPT_DIR/../trajectory_data}"
 # WAYPOINT_DIR="/home/sgarimella34/multi-robot-coordination/trajectory_data/CSLAM_random_explore/test_thruroad_dump"
 
 # WAYPOINT_DIR="/home/dellg16ssg/multi-robot-coordination/trajectory_data/CSLAM_random_explore"
@@ -31,6 +34,11 @@ DEFAULT_CTRL_HZ=25
 
 # Prefix for UGV names (adjust to match your naming convention)
 PREFIX="Husky"
+
+if [[ ! -x "$EXECUTABLE_PATH" ]]; then
+    echo "ERROR: $EXECUTABLE_PATH not found. Build it with ./build.sh, or set EXECUTABLE_PATH."
+    exit 1
+fi
 
 # Array to hold process IDs for launched instances
 PIDS=()

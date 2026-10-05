@@ -53,7 +53,7 @@ ASimModeBase::ASimModeBase()
 
     static ConstructorHelpers::FClassFinder<APIPCamera> external_camera_class(TEXT("Blueprint'/AirSim/Blueprints/BP_PIPCamera'"));
     external_camera_class_ = external_camera_class.Succeeded() ? external_camera_class.Class : nullptr;
-    static ConstructorHelpers::FClassFinder<ACameraDirector> camera_director_class(TEXT("Blueprint'/AirSim/Blueprints/BP_CameraDirector'"));
+    static ConstructorHelpers::FClassFinder<AAirSimCameraDirector> camera_director_class(TEXT("Blueprint'/AirSim/Blueprints/BP_CameraDirector'"));
     camera_director_class_ = camera_director_class.Succeeded() ? camera_director_class.Class : nullptr;
 
     static ConstructorHelpers::FObjectFinder<UParticleSystem> collision_display(TEXT("ParticleSystem'/AirSim/StarterContent/Particles/P_Explosion.P_Explosion'"));
@@ -1388,6 +1388,21 @@ bool ASimModeBase::DeleteActorFromInstanceSegmentation(AActor *Actor, bool updat
     return success;
 }
 
+bool ASimModeBase::PaintInstanceSegmentationComponentAs(UMeshComponent *Component, UMeshComponent *ObjectComponent, bool update_annotation)
+{
+    bool success = instance_segmentation_annotator_.PaintComponentAs(Component, ObjectComponent);
+    if (success && update_annotation)
+        updateInstanceSegmentationAnnotation();
+    return success;
+}
+
+void ASimModeBase::UnpaintInstanceSegmentationComponent(UMeshComponent *Component, bool update_annotation)
+{
+    instance_segmentation_annotator_.UnpaintComponent(Component);
+    if (update_annotation)
+        updateInstanceSegmentationAnnotation();
+}
+
 void ASimModeBase::ForceUpdateInstanceSegmentation()
 {
     instance_segmentation_annotator_.UpdateAnnotationComponents(this->GetWorld());
@@ -1447,6 +1462,31 @@ void ASimModeBase::ForceUpdateAnnotation(FString annotation_name)
 void ASimModeBase::updateInstanceSegmentationAnnotation()
 {
     TArray<TWeakObjectPtr<UPrimitiveComponent>> current_segmentation_components = instance_segmentation_annotator_.GetAnnotationComponents();
+    // Cameras hide only the components added since the previous refresh: with thousands of components
+    // (e.g. streamed map tiles), hiding all of them in every camera at each refresh stalled the game
+    const TArray<TWeakObjectPtr<UPrimitiveComponent>> new_segmentation_components = instance_segmentation_annotator_.TakeNewAnnotationComponents();
+    const uint64 refresh_serial = ++instance_segmentation_refresh_serial_;
+    if (APlayerController* controller = GetWorld()->GetFirstPlayerController())
+    {
+        if (instance_segmentation_hidden_controller_ != controller)
+        {
+            instance_segmentation_hidden_controller_ = controller;
+            instance_segmentation_controller_serial_ = 0;
+        }
+        TArray<TWeakObjectPtr<UPrimitiveComponent>>& hidden = controller->HiddenPrimitiveComponents;
+        if (instance_segmentation_controller_serial_ != 0 && instance_segmentation_controller_serial_ + 1 == refresh_serial)
+            hidden.Append(new_segmentation_components);
+        else
+        {
+            TSet<TWeakObjectPtr<UPrimitiveComponent>> present(hidden);
+            for (const TWeakObjectPtr<UPrimitiveComponent>& component : current_segmentation_components)
+                if (!present.Contains(component))
+                    hidden.Add(component);
+        }
+        instance_segmentation_controller_serial_ = refresh_serial;
+        if (hidden.Num() > 2 * current_segmentation_components.Num() + 1024)
+            hidden.RemoveAll([](const TWeakObjectPtr<UPrimitiveComponent>& component) { return !component.IsValid(); });
+    }
 
     TArray<AActor *> cameras_found;
     UAirBlueprintLib::RunCommandOnGameThread([this, &cameras_found]()
@@ -1456,7 +1496,7 @@ void ASimModeBase::updateInstanceSegmentationAnnotation()
         for (auto camera_actor : cameras_found)
         {
             APIPCamera *cur_camera = static_cast<APIPCamera *>(camera_actor);
-            cur_camera->updateInstanceSegmentationAnnotation(current_segmentation_components);
+            cur_camera->updateInstanceSegmentationAnnotation(current_segmentation_components, new_segmentation_components, refresh_serial);
         }
     }
     TArray<AActor *> lidar_cameras_found;
@@ -1474,13 +1514,13 @@ void ASimModeBase::updateInstanceSegmentationAnnotation()
     if (CameraDirector != nullptr)
     {
         if (CameraDirector->getFpvCamera() != nullptr)
-            CameraDirector->getFpvCamera()->updateInstanceSegmentationAnnotation(current_segmentation_components, true);
+            CameraDirector->getFpvCamera()->updateInstanceSegmentationAnnotation(current_segmentation_components, new_segmentation_components, refresh_serial, true);
         if (CameraDirector->getExternalCamera() != nullptr)
-            CameraDirector->getExternalCamera()->updateInstanceSegmentationAnnotation(current_segmentation_components, true);
+            CameraDirector->getExternalCamera()->updateInstanceSegmentationAnnotation(current_segmentation_components, new_segmentation_components, refresh_serial, true);
         if (CameraDirector->getBackupCamera() != nullptr)
-            CameraDirector->getBackupCamera()->updateInstanceSegmentationAnnotation(current_segmentation_components, true);
+            CameraDirector->getBackupCamera()->updateInstanceSegmentationAnnotation(current_segmentation_components, new_segmentation_components, refresh_serial, true);
         if (CameraDirector->getFrontCamera() != nullptr)
-            CameraDirector->getFrontCamera()->updateInstanceSegmentationAnnotation(current_segmentation_components, true);
+            CameraDirector->getFrontCamera()->updateInstanceSegmentationAnnotation(current_segmentation_components, new_segmentation_components, refresh_serial, true);
     }
 }
 
@@ -1689,6 +1729,16 @@ void ASimModeBase::setExtForce(const msr::airlib::Vector3r &ext_force) const
     throw std::domain_error("setExtForce not implemented by SimMode");
 }
 
+void ASimModeBase::SetOriginGeoPoint(double Latitude, double Longitude, double Altitude)
+{
+    const msr::airlib::GeoPoint origin(Latitude, Longitude, static_cast<float>(Altitude));
+    AirSimSettings::singleton().origin_geopoint.initialize(origin);
+    if (getApiProvider() == nullptr)
+        return;
+    for (auto sim_api : getApiProvider()->getVehicleSimApis())
+        static_cast<PawnSimApi *>(sim_api)->setHomeGeoPoint(AirSimSettings::singleton().origin_geopoint);
+}
+
 std::vector<std::unique_ptr<msr::airlib::ApiServerBase>> ASimModeBase::createApiServer() const
 {
     // this will be the case when compilation with RPCLIB is disabled or simmode doesn't support APIs
@@ -1820,14 +1870,14 @@ const msr::airlib::AirSimSettings &ASimModeBase::getSettings() const
 void ASimModeBase::initializeCameraDirector(const FTransform &camera_transform, float follow_distance)
 {
     TArray<AActor *> camera_dirs;
-    UAirBlueprintLib::FindAllActor<ACameraDirector>(this, camera_dirs);
+    UAirBlueprintLib::FindAllActor<AAirSimCameraDirector>(this, camera_dirs);
     if (camera_dirs.Num() == 0)
     {
         // create director
         FActorSpawnParameters camera_spawn_params;
         camera_spawn_params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
         camera_spawn_params.Name = "CameraDirector";
-        CameraDirector = this->GetWorld()->SpawnActor<ACameraDirector>(camera_director_class_,
+        CameraDirector = this->GetWorld()->SpawnActor<AAirSimCameraDirector>(camera_director_class_,
                                                                        camera_transform,
                                                                        camera_spawn_params);
         CameraDirector->setFollowDistance(follow_distance);
@@ -1840,7 +1890,7 @@ void ASimModeBase::initializeCameraDirector(const FTransform &camera_transform, 
     }
     else
     {
-        CameraDirector = static_cast<ACameraDirector *>(camera_dirs[0]);
+        CameraDirector = static_cast<AAirSimCameraDirector *>(camera_dirs[0]);
     }
 }
 

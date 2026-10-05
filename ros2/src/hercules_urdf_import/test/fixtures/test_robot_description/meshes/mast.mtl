@@ -1,0 +1,5 @@
+newmtl blue
+Kd 0.1 0.2 0.9
+d 1.0
+newmtl white
+Kd 1 1 1

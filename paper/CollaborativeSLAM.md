@@ -10,7 +10,7 @@ This README contains instructions for replicating the Collaborative SLAM experim
 
 ### Accessing the Data
 
-The HERCULES dataset is hosted on Hugging Face:
+The HERCULES dataset's home is Hugging Face (uploading the full sequences is still on the project [roadmap](https://github.com/lunarlab-gatech/HERCULES#roadmap)):
 
 [🤗 huggingface.co/datasets/GeorgiaTech/HERCULES](https://huggingface.co/datasets/GeorgiaTech/HERCULES)
 

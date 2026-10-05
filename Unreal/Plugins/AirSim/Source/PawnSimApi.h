@@ -108,6 +108,8 @@ protected: //additional interface for derived class
     msr::airlib::Environment* getEnvironment();
 
 public: //Unreal specific methods
+    // Recompute this vehicle's home from a new geographic origin (see ASimModeBase::SetOriginGeoPoint)
+    void setHomeGeoPoint(const msr::airlib::HomeGeoPoint& origin);
     PawnSimApi(const Params& params);
 
     //returns one of the cameras attached to the pawn

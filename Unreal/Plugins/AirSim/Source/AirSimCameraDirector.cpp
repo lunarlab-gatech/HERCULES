@@ -1,8 +1,8 @@
-#include "CameraDirector.h"
+#include "AirSimCameraDirector.h"
 #include "GameFramework/PlayerController.h"
 #include "AirBlueprintLib.h"
 
-ACameraDirector::ACameraDirector()
+AAirSimCameraDirector::AAirSimCameraDirector()
 {
     PrimaryActorTick.bCanEverTick = true;
 
@@ -20,12 +20,12 @@ ACameraDirector::ACameraDirector()
     SpringArm->bInheritRoll = true;
 }
 
-void ACameraDirector::BeginPlay()
+void AAirSimCameraDirector::BeginPlay()
 {
     Super::BeginPlay();
 }
 
-void ACameraDirector::Tick(float DeltaTime)
+void AAirSimCameraDirector::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
@@ -43,12 +43,12 @@ void ACameraDirector::Tick(float DeltaTime)
     }
 }
 
-ECameraDirectorMode ACameraDirector::getMode()
+ECameraDirectorMode AAirSimCameraDirector::getMode()
 {
     return mode_;
 }
 
-void ACameraDirector::initializeForBeginPlay(ECameraDirectorMode view_mode,
+void AAirSimCameraDirector::initializeForBeginPlay(ECameraDirectorMode view_mode,
                                              AActor* follow_actor, APIPCamera* fpv_camera, APIPCamera* front_camera, APIPCamera* back_camera)
 {
     manual_pose_controller_ = NewObject<UManualPoseController>(this, "CameraDirector_ManualPoseController");
@@ -98,7 +98,7 @@ void ACameraDirector::initializeForBeginPlay(ECameraDirectorMode view_mode,
     }
 }
 
-void ACameraDirector::attachSpringArm(bool attach)
+void AAirSimCameraDirector::attachSpringArm(bool attach)
 {
     if (attach) {
         //If we do have actor to follow AND don't have sprint arm attached to that actor, we will attach it
@@ -134,7 +134,7 @@ void ACameraDirector::attachSpringArm(bool attach)
     }
 }
 
-void ACameraDirector::setMode(ECameraDirectorMode mode)
+void AAirSimCameraDirector::setMode(ECameraDirectorMode mode)
 {
     { //first remove any settings done by previous mode
 
@@ -184,21 +184,21 @@ void ACameraDirector::setMode(ECameraDirectorMode mode)
     mode_ = mode;
 }
 
-void ACameraDirector::setupInputBindings()
+void AAirSimCameraDirector::setupInputBindings()
 {
     UAirBlueprintLib::EnableInput(this);
 
-    UAirBlueprintLib::BindActionToKey("inputEventFpvView", EKeys::F, this, &ACameraDirector::inputEventFpvView);
-    UAirBlueprintLib::BindActionToKey("inputEventFlyWithView", EKeys::B, this, &ACameraDirector::inputEventFlyWithView);
-    UAirBlueprintLib::BindActionToKey("inputEventGroundView", EKeys::Backslash, this, &ACameraDirector::inputEventGroundView);
-    UAirBlueprintLib::BindActionToKey("inputEventManualView", EKeys::M, this, &ACameraDirector::inputEventManualView);
-    UAirBlueprintLib::BindActionToKey("inputEventSpringArmChaseView", EKeys::Slash, this, &ACameraDirector::inputEventSpringArmChaseView);
-    UAirBlueprintLib::BindActionToKey("inputEventBackupView", EKeys::K, this, &ACameraDirector::inputEventBackupView);
-    UAirBlueprintLib::BindActionToKey("inputEventNoDisplayView", EKeys::Hyphen, this, &ACameraDirector::inputEventNoDisplayView);
-    UAirBlueprintLib::BindActionToKey("inputEventFrontView", EKeys::I, this, &ACameraDirector::inputEventFrontView);
+    UAirBlueprintLib::BindActionToKey("inputEventFpvView", EKeys::F, this, &AAirSimCameraDirector::inputEventFpvView);
+    UAirBlueprintLib::BindActionToKey("inputEventFlyWithView", EKeys::B, this, &AAirSimCameraDirector::inputEventFlyWithView);
+    UAirBlueprintLib::BindActionToKey("inputEventGroundView", EKeys::Backslash, this, &AAirSimCameraDirector::inputEventGroundView);
+    UAirBlueprintLib::BindActionToKey("inputEventManualView", EKeys::M, this, &AAirSimCameraDirector::inputEventManualView);
+    UAirBlueprintLib::BindActionToKey("inputEventSpringArmChaseView", EKeys::Slash, this, &AAirSimCameraDirector::inputEventSpringArmChaseView);
+    UAirBlueprintLib::BindActionToKey("inputEventBackupView", EKeys::K, this, &AAirSimCameraDirector::inputEventBackupView);
+    UAirBlueprintLib::BindActionToKey("inputEventNoDisplayView", EKeys::Hyphen, this, &AAirSimCameraDirector::inputEventNoDisplayView);
+    UAirBlueprintLib::BindActionToKey("inputEventFrontView", EKeys::I, this, &AAirSimCameraDirector::inputEventFrontView);
 }
 
-void ACameraDirector::EndPlay(const EEndPlayReason::Type EndPlayReason)
+void AAirSimCameraDirector::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     manual_pose_controller_ = nullptr;
     SpringArm = nullptr;
@@ -207,29 +207,31 @@ void ACameraDirector::EndPlay(const EEndPlayReason::Type EndPlayReason)
     backup_camera_ = nullptr;
     front_camera_ = nullptr;
     follow_actor_ = nullptr;
+
+    Super::EndPlay(EndPlayReason);
 }
 
-APIPCamera* ACameraDirector::getFpvCamera() const
+APIPCamera* AAirSimCameraDirector::getFpvCamera() const
 {
     return fpv_camera_;
 }
 
-APIPCamera* ACameraDirector::getExternalCamera() const
+APIPCamera* AAirSimCameraDirector::getExternalCamera() const
 {
     return ExternalCamera;
 }
 
-APIPCamera* ACameraDirector::getBackupCamera() const
+APIPCamera* AAirSimCameraDirector::getBackupCamera() const
 {
     return backup_camera_;
 }
 
-APIPCamera* ACameraDirector::getFrontCamera() const
+APIPCamera* AAirSimCameraDirector::getFrontCamera() const
 {
     return front_camera_;
 }
 
-void ACameraDirector::inputEventSpringArmChaseView()
+void AAirSimCameraDirector::inputEventSpringArmChaseView()
 {
     if (ExternalCamera) {
         setMode(ECameraDirectorMode::CAMERA_DIRECTOR_MODE_SPRINGARM_CHASE);
@@ -242,7 +244,7 @@ void ACameraDirector::inputEventSpringArmChaseView()
     notifyViewModeChanged();
 }
 
-void ACameraDirector::inputEventGroundView()
+void AAirSimCameraDirector::inputEventGroundView()
 {
     if (ExternalCamera) {
         setMode(ECameraDirectorMode::CAMERA_DIRECTOR_MODE_GROUND_OBSERVER);
@@ -256,7 +258,7 @@ void ACameraDirector::inputEventGroundView()
     notifyViewModeChanged();
 }
 
-void ACameraDirector::inputEventManualView()
+void AAirSimCameraDirector::inputEventManualView()
 {
     if (ExternalCamera) {
         setMode(ECameraDirectorMode::CAMERA_DIRECTOR_MODE_MANUAL);
@@ -269,7 +271,7 @@ void ACameraDirector::inputEventManualView()
     notifyViewModeChanged();
 }
 
-void ACameraDirector::inputEventNoDisplayView()
+void AAirSimCameraDirector::inputEventNoDisplayView()
 {
     if (ExternalCamera) {
         setMode(ECameraDirectorMode::CAMERA_DIRECTOR_MODE_NODISPLAY);
@@ -281,7 +283,7 @@ void ACameraDirector::inputEventNoDisplayView()
     notifyViewModeChanged();
 }
 
-void ACameraDirector::inputEventBackupView()
+void AAirSimCameraDirector::inputEventBackupView()
 {
     if (backup_camera_) {
         setMode(ECameraDirectorMode::CAMERA_DIRECTOR_MODE_BACKUP);
@@ -294,7 +296,7 @@ void ACameraDirector::inputEventBackupView()
     notifyViewModeChanged();
 }
 
-void ACameraDirector::inputEventFrontView()
+void AAirSimCameraDirector::inputEventFrontView()
 {
     if (front_camera_) {
         setMode(ECameraDirectorMode::CAMERA_DIRECTOR_MODE_FRONT);
@@ -307,7 +309,7 @@ void ACameraDirector::inputEventFrontView()
     notifyViewModeChanged();
 }
 
-void ACameraDirector::inputEventFlyWithView()
+void AAirSimCameraDirector::inputEventFlyWithView()
 {
     if (ExternalCamera) {
         setMode(ECameraDirectorMode::CAMERA_DIRECTOR_MODE_FLY_WITH_ME);
@@ -325,7 +327,7 @@ void ACameraDirector::inputEventFlyWithView()
     notifyViewModeChanged();
 }
 
-void ACameraDirector::inputEventFpvView()
+void AAirSimCameraDirector::inputEventFpvView()
 {
     if (fpv_camera_) {
         setMode(ECameraDirectorMode::CAMERA_DIRECTOR_MODE_FPV);
@@ -338,7 +340,7 @@ void ACameraDirector::inputEventFpvView()
     notifyViewModeChanged();
 }
 
-void ACameraDirector::disableCameras(bool fpv, bool backup, bool front)
+void AAirSimCameraDirector::disableCameras(bool fpv, bool backup, bool front)
 {
     if (fpv && fpv_camera_)
         fpv_camera_->disableMain();
@@ -348,7 +350,7 @@ void ACameraDirector::disableCameras(bool fpv, bool backup, bool front)
         front_camera_->disableMain();
 }
 
-void ACameraDirector::notifyViewModeChanged()
+void AAirSimCameraDirector::notifyViewModeChanged()
 {
     bool nodisplay = ECameraDirectorMode::CAMERA_DIRECTOR_MODE_NODISPLAY == mode_;
 

@@ -1,4 +1,5 @@
 #include "airsim_settings_parser.h"
+#include "sim_mode_from_settings.h"
 
 AirSimSettingsParser::AirSimSettingsParser(const std::string& host_ip, uint16_t host_port)
     : host_ip_(host_ip)
@@ -25,7 +26,16 @@ bool AirSimSettingsParser::getSettingsText(std::string& settings_text) const
 std::string AirSimSettingsParser::getSimMode()
 {
     const auto& settings_json = msr::airlib::Settings::loadJSonString(settings_text_);
-    return settings_json.getString("SimMode", "");
+    const auto sim_mode = settings_json.getString("SimMode", "");
+    if (!sim_mode.empty()) {
+        return sim_mode;
+    }
+
+    msr::airlib::RpcLibClientBase airsim_client(host_ip_, host_port_, 5.0f);
+    const auto detected_mode = sim_mode_from_default_vehicle(airsim_client.listVehicles());
+    std::cout << "SimMode omitted from simulator settings; detected " << detected_mode
+              << " from the active default vehicle." << std::endl;
+    return detected_mode;
 }
 
 // mimics void ASimHUD::initializeSettings()

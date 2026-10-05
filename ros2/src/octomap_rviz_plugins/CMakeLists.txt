@@ -11,10 +11,29 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(ament_cmake_auto REQUIRED)
-ament_auto_find_build_dependencies()
+ament_auto_find_build_dependencies(REQUIRED octomap_msgs)
 
-find_package(Qt5 REQUIRED COMPONENTS Widgets)
+# Use the Qt major version rviz_common was built with (Qt5 on Jazzy, Qt6 on
+# Lyrical), even when the other Qt's development files are installed too.
+if(TARGET Qt6::Widgets)
+  set(QT_VERSION_MAJOR 6)
+else()
+  set(QT_VERSION_MAJOR 5)
+endif()
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
+set(QT_VERSION ${Qt${QT_VERSION_MAJOR}_VERSION})
+if(${QT_VERSION} VERSION_LESS 5.15.0)
+  function(qt_wrap_cpp out)
+    qt5_wrap_cpp(_sources ${ARGN})
+    set("${out}" ${_sources} PARENT_SCOPE)
+  endfunction()
+endif()
 set(CMAKE_AUTOMOC ON)
+
+# liboctomap-dev is listed in the package.xml, but the CMake package name is octomap,
+# so we need to find it explicitly as ament_auto_find_build_dependencies just tries to find
+# it as liboctomap-dev (without finding anything)
+find_package(octomap REQUIRED)
 
 set(octomap_rviz_plugins_headers_to_moc
   include/octomap_rviz_plugins/occupancy_grid_display.hpp
@@ -22,7 +41,7 @@ set(octomap_rviz_plugins_headers_to_moc
 )
 
 foreach(header "${octomap_rviz_plugins_headers_to_moc}")
-  qt5_wrap_cpp(octomap_rviz_plugins_moc_files "${header}")
+  qt_wrap_cpp(octomap_rviz_plugins_moc_files "${header}")
 endforeach()
 
 ament_auto_add_library(${PROJECT_NAME} SHARED
@@ -32,12 +51,8 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
 )
 
 target_link_libraries(${PROJECT_NAME}
-  Qt5::Widgets
+  Qt${QT_VERSION_MAJOR}::Widgets
   octomap
-)
-
-target_include_directories(${PROJECT_NAME} PUBLIC
-  ${Qt5Widgets_INCLUDE_DIRS}
 )
 
 target_compile_definitions(${PROJECT_NAME} PUBLIC "PLUGINLIB__DISABLE_BOOST_FUNCTIONS")

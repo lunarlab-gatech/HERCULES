@@ -63,10 +63,11 @@ __pragma(warning(disable : 4239))
 
         static float normalizeAngle(float angle)
         {
-            while (angle > M_PI)
-                angle -= 2 * M_PI;
-            while (angle < -M_PI)
-                angle += 2 * M_PI;
+            constexpr float pi = static_cast<float>(M_PI);
+            while (angle > pi)
+                angle -= 2 * pi;
+            while (angle < -pi)
+                angle += 2 * pi;
             return angle;
         }
 

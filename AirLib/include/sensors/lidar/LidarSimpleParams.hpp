@@ -6,6 +6,8 @@
 
 #include "common/Common.hpp"
 #include "common/AirSimSettings.hpp"
+#include <algorithm>
+#include <stdexcept>
 
 namespace msr
 {
@@ -56,6 +58,34 @@ namespace airlib
         real_T update_frequency = 10; // Hz
         real_T startup_delay = 1; // sec
 
+        // Optional per-channel beam table, as calibrated sensors such as Ouster
+        // report it. vertical_angles: the elevation of every channel in degrees,
+        // positive up, in channel order; when given, it sets number_of_channels
+        // and the vertical FOV. azimuth_offsets: one offset per channel in
+        // degrees, clockwise seen from above (the sweep's direction), added to
+        // the sweep angle. Empty means evenly spaced beams with no offset.
+        vector<real_T> vertical_angles;
+        vector<real_T> azimuth_offsets;
+
+        // The elevation of every channel in degrees, in channel order.
+        vector<real_T> channelElevations() const
+        {
+            if (!vertical_angles.empty())
+                return vertical_angles;
+            vector<real_T> elevations;
+            const real_T delta = number_of_channels > 1
+                                     ? (vertical_FOV_upper - vertical_FOV_lower) / static_cast<real_T>(number_of_channels - 1)
+                                     : 0;
+            for (uint channel = 0; channel < number_of_channels; ++channel)
+                elevations.push_back(vertical_FOV_upper - static_cast<real_T>(channel) * delta);
+            return elevations;
+        }
+
+        real_T channelAzimuthOffset(uint channel) const
+        {
+            return channel < azimuth_offsets.size() ? azimuth_offsets[channel] : 0;
+        }
+
         void initializeFromSettings(const AirSimSettings::LidarSetting& settings)
         {
             std::string simmode_name = AirSimSettings::singleton().simmode_name;
@@ -98,6 +128,19 @@ namespace airlib
 
             horizontal_FOV_start = settings_json.getFloat("HorizontalFOVStart", horizontal_FOV_start);
             horizontal_FOV_end = settings_json.getFloat("HorizontalFOVEnd", horizontal_FOV_end);
+
+            const auto elevations = settings_json.getFloatArray("VerticalAngles");
+            vertical_angles.assign(elevations.begin(), elevations.end());
+            if (!vertical_angles.empty()) {
+                number_of_channels = static_cast<uint>(vertical_angles.size());
+                vertical_FOV_upper = *std::max_element(vertical_angles.begin(), vertical_angles.end());
+                vertical_FOV_lower = *std::min_element(vertical_angles.begin(), vertical_angles.end());
+            }
+            const auto offsets = settings_json.getFloatArray("AzimuthOffsets");
+            azimuth_offsets.assign(offsets.begin(), offsets.end());
+            if (!azimuth_offsets.empty() && azimuth_offsets.size() != number_of_channels)
+                throw std::invalid_argument("lidar '" + settings.sensor_name + "': AzimuthOffsets needs one value per channel (" +
+                                            std::to_string(number_of_channels) + "), got " + std::to_string(azimuth_offsets.size()));
 
             relative_pose.position = AirSimSettings::createVectorSetting(settings_json, VectorMath::nanVector());
             auto rotation = AirSimSettings::createRotationSetting(settings_json, AirSimSettings::Rotation::nanRotation());

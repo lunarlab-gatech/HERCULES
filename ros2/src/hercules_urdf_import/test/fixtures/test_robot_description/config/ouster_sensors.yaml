@@ -1,0 +1,7 @@
+# The skid robot with a calibrated Ouster beam table on its lidar mount
+# (paths are relative to this file).
+lidars:
+  - name: os1
+    link: os_sensor
+    ouster_metadata: ../../ouster/os1_16_synthetic.json
+    range: 120

@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>hercules_urdf_import</name>
+  <version>0.1.0</version>
+  <description>
+    Import URDF robots into HERCULES: generates the settings.json vehicle,
+    the visual manifest and meshes the Unreal plugin attaches to the pawn,
+    and a robot_state_publisher setup whose TF tree matches the frames the
+    HERCULES ROS 2 wrapper stamps its sensor data with.
+  </description>
+  <maintainer email="john.c.furey@erdc.dren.mil">John C. Furey</maintainer>
+  <license>MIT</license>
+
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>xacro</exec_depend>
+
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>launch_testing</test_depend>
+  <test_depend>launch_testing_ros</test_depend>
+  <test_depend>python3-pytest</test_depend>
+  <test_depend>rclpy</test_depend>
+  <test_depend>tf2_ros_py</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

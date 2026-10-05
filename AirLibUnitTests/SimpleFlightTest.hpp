@@ -20,6 +20,10 @@ namespace airlib
     public:
         virtual void run() override
         {
+            AirSimSettings::initializeSettings(
+                R"({"SettingsVersion": 2.0, "SimMode": "Multirotor"})");
+            AirSimSettings::singleton().load(nullptr);
+
             auto clock = std::make_shared<SteppableClock>(3E-3f);
             ClockFactory::get(clock);
 
@@ -43,6 +47,10 @@ namespace airlib
             environment.reset(new Environment(initial_environment));
 
             MultiRotorPhysicsBody vehicle(params.get(), api.get(), kinematics.get(), environment.get());
+            // As MultirotorPawnSimApi does: the firmware reads ground truth and
+            // is reset by its owner, not by the physics body that updates it.
+            api->setSimulatedGroundTruth(&kinematics->getState(), environment.get());
+            api->reset();
 
             std::vector<UpdatableObject*> vehicles = { &vehicle };
             std::unique_ptr<PhysicsEngineBase> physics_engine(new FastPhysicsEngine());
@@ -68,7 +76,9 @@ namespace airlib
 
             clock->sleep_for(2.0f);
 
-            while (true) {
+            // Bounded run (the original loop never returned, so the test binary
+            // could not be used in CI).
+            for (int step = 0; step < 50; ++step) {
                 clock->sleep_for(0.1f);
                 api->getStatusMessages(messages_);
                 for (const auto& status_message : messages_) {
@@ -76,6 +86,10 @@ namespace airlib
                 }
                 messages_.clear();
             }
+
+            physics_world.stopAsyncUpdator();
+            const auto position = kinematics->getPose().position;
+            testAssert(position.z() < -1.0f, "SimpleFlight did not take off");
         }
 
     private:

@@ -14,7 +14,7 @@ We've two options for docker. You can either build an image for running [HERCULE
    Defaults to `airsim_binary` with same tag as the base image.
 
 ```bash
-cd Airsim/docker;
+cd HERCULES/docker;
 python build_airsim_image.py \
    --base_image=ghcr.io/epicgames/unreal-engine:runtime \
    --target_image=airsim_binary:runtime
@@ -24,12 +24,12 @@ python build_airsim_image.py \
  `docker images | grep airsim`
 
 #### Running an unreal binary inside a docker container
-- Get a Linux packaged Unreal project binary like the Blocks packaged binary example [found in the releases of HERCULES](https://github.com/lunarlab-gatech/HERCULES/releases) or package your own project in Ubuntu.
-Let's take the Blocks project binary as an example.
+- Get a Linux packaged Unreal project binary, such as a [packaged HERCULES environment](packaged_environments.md) or the upstream Cosys-AirSim Blocks binary, or package your own project in Ubuntu.
+Let's take the upstream Blocks binary as an example.
 You can download it by running
 
 ```bash
-cd Airsim/docker;
+cd HERCULES/docker;
 ./download_blocks_env_binary.sh
 ```
 
@@ -44,11 +44,10 @@ xhost +local:docker
 ```
 
    Do not forget to run the xhost command first to bind the X11 to docker.
-   For Blocks, you can do a `./run_airsim_image_binary.sh airsim_binary:runtime LinuxBlocks/Linux/Blocks.sh -windowed -ResX=1080 -ResY=720`
-`
+   For Blocks, you can do a `./run_airsim_image_binary.sh airsim_binary:runtime Blocks_packaged_Linux_52_32/Linux/Blocks.sh -windowed -ResX=1080 -ResY=720`
 
    * `DOCKER_IMAGE_NAME`: Same as `target_image` parameter in previous step. By default, enter `airsim_binary:runtime`
-   * `UNREAL_BINARY_SHELL_SCRIPT`: for Blocks enviroment, it will be `LinuxBlocks/Linux/Blocks.sh`
+   * `UNREAL_BINARY_SHELL_SCRIPT`: for Blocks enviroment, it will be `Blocks_packaged_Linux_52_32/Linux/Blocks.sh`
    * [`UNREAL_BINARY_ARGUMENTS`](https://docs.unrealengine.com/en-us/Programming/Basics/CommandLineArguments):
       For airsim, most relevant would be `-windowed`, `-ResX`, `-ResY`. Click on link to see all options.
 
@@ -66,11 +65,11 @@ xhost +local:docker
    Defaults to `airsim_source` with same tag as the base image
 
 ```bash
-$ cd Airsim/docker;
+$ cd HERCULES/docker;
 $ python build_airsim_image.py \
    --source \
-   ----base_image ghcr.io/epicgames/unreal-engine:dev-5.2.1 \
-   --target_image=airsim_source:dev-5.2.1
+   --base_image=ghcr.io/epicgames/unreal-engine:dev-5.8.3 \
+   --target_image=airsim_source:dev-5.8.3
 ```
 
 #### Running HERCULES container
@@ -78,21 +77,21 @@ $ python build_airsim_image.py \
 
 ```bash
 xhost +local:docker
-./run_airsim_image_source.sh airsim_source:dev-5.2.1 
+./run_airsim_image_source.sh airsim_source:dev-5.8.3
 ```
 
    Syntax is `./run_airsim_image_source.sh DOCKER_IMAGE_NAME`
    Do not forget to run the xhost command first to bind the X11 to docker.
 
-* Inside the container, you can see `UnrealEngine` and `Cosys-AirSim` under `/home/ue4`.
+* Inside the container, you can see `UnrealEngine` and `HERCULES` under `/home/ue4`.
 * Start unreal engine inside the container:
    `/home/ue4/UnrealEngine/Engine/Binaries/Linux/UnrealEditor`
 * [Specifying an airsim settings.json](#specifying-settingsjson)
 * Continue with [HERCULES's Linux docs](install_linux.md#build-unreal-environment).
-  For example start the Blocks environment in the container run (This will first copy the plugin and afterwards start open the project with the Unreal Editor):
+  For example start the Blocks environment in the container run (This will first copy the plugin and afterwards start open the project with the Unreal Editor). The repository does not include `Blocks.uproject` or its `Content/`; fetch them first as described in [Create the Blocks project](hero_team_quickstart.md#2-create-the-blocks-project).
 ```bash
-/home/ue4/Cosys-AirSim/Unreal/Environments/Blocks/update_from_git.sh
-/home/ue4/UnrealEngine/Engine/Binaries/Linux/UnrealEditor /home/ue4/Cosys-AirSim/Unreal/Environments/Blocks/Blocks.uproject
+(cd /home/ue4/HERCULES/Unreal/Environments/Blocks && ./update_from_git.sh)
+/home/ue4/UnrealEngine/Engine/Binaries/Linux/UnrealEditor /home/ue4/HERCULES/Unreal/Environments/Blocks/Blocks.uproject
 ```
 
 #### Packaging Unreal Environments in `airsim_source` containers
@@ -102,15 +101,15 @@ xhost +local:docker
 ```bash
 /home/ue4/UnrealEngine/Engine/Build/BatchFiles/RunUAT.sh BuildCookRun -platform=Linux -clientconfig=Development -serverconfig=Development -noP4 -cook -allmaps -build -stage -prereqs -pak -archive \
 -archivedirectory=/home/ue4/Binaries/Blocks/ \
--project=/home/ue4/Cosys-AirSim/Unreal/Environments/Blocks/Blocks.uproject
+-project=/home/ue4/HERCULES/Unreal/Environments/Blocks/Blocks.uproject
 ```
 
 This would create a Blocks binary in `/home/ue4/Binaries/Blocks/`.
-You can test it by running `/home/ue4/Binaries/Blocks/LinuxNoEditor/Blocks.sh -windowed`
+You can test it by running `/home/ue4/Binaries/Blocks/Linux/Blocks.sh -windowed`
 
 ## Specifying settings.json
 #### `airsim_binary` docker image:
-  - We're mapping the host machine's `PATH/TO/Airsim/settings.json` to the docker container's `/home/airsim_user/Documents/airsim/settings.json`.
+  - We're mapping the `settings.json` in the directory you run the script from to the docker container's `/home/airsim_user/Documents/AirSim/settings.json`.
   - Hence, we can load any settings file by simply modifying `PATH_TO_YOUR/settings.json` by modifying the following snippets in [`run_airsim_image_binary.sh`](https://github.com/lunarlab-gatech/HERCULES/blob/main/docker/run_airsim_image_binary.sh) to link `$PATH_TO_YOUR` to the correct folder. 
 
 ```sh
@@ -124,7 +123,7 @@ $DOCKER_IMAGE_NAME \
 
 ####  `airsim_source` docker image:
 
-  * We're mapping the host machine's `PATH/TO/Cosys-AirSim/settings.json` to the docker container's `/home/ue4/Documents/airsim/settings.json`.
+  * We're mapping the `settings.json` in the directory you run the script from to the docker container's `/home/ue4/Documents/AirSim/settings.json`.
   * Hence, we can load any settings file by simply modifying `PATH_TO_YOUR/settings.json` by modifying the following snippets in [`run_airsim_image_source.sh`](https://github.com/lunarlab-gatech/HERCULES/blob/main/docker/run_airsim_image_source.sh):
 
 ```sh

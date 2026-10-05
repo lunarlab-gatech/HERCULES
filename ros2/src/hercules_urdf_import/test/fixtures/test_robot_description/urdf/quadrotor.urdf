@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+<!-- Quadrotor test robot: spinning rotors and a two-axis camera gimbal. -->
+<robot name="quadrotor">
+  <link name="base_link">
+    <visual>
+      <geometry><box size="0.2 0.2 0.08"/></geometry>
+      <material name="carbon"><color rgba="0.05 0.05 0.05 1"/></material>
+    </visual>
+    <visual name="arm_x">
+      <origin rpy="0 1.5707963267948966 0.7853981633974483"/>
+      <geometry><cylinder radius="0.01" length="0.5"/></geometry>
+      <material name="carbon"/>
+    </visual>
+    <visual name="arm_y">
+      <origin rpy="0 1.5707963267948966 -0.7853981633974483"/>
+      <geometry><cylinder radius="0.01" length="0.5"/></geometry>
+      <material name="carbon"/>
+    </visual>
+  </link>
+  <link name="rotor_0"><visual><geometry><cylinder radius="0.12" length="0.005"/></geometry></visual></link>
+  <joint name="rotor_0_joint" type="continuous">
+    <parent link="base_link"/><child link="rotor_0"/>
+    <origin xyz="0.1768 0.1768 0.05"/><axis xyz="0 0 1"/>
+  </joint>
+  <link name="rotor_1"><visual><geometry><cylinder radius="0.12" length="0.005"/></geometry></visual></link>
+  <joint name="rotor_1_joint" type="continuous">
+    <parent link="base_link"/><child link="rotor_1"/>
+    <origin xyz="-0.1768 0.1768 0.05"/><axis xyz="0 0 1"/>
+  </joint>
+  <link name="rotor_2"><visual><geometry><cylinder radius="0.12" length="0.005"/></geometry></visual></link>
+  <joint name="rotor_2_joint" type="continuous">
+    <parent link="base_link"/><child link="rotor_2"/>
+    <origin xyz="-0.1768 -0.1768 0.05"/><axis xyz="0 0 1"/>
+  </joint>
+  <link name="rotor_3"><visual><geometry><cylinder radius="0.12" length="0.005"/></geometry></visual></link>
+  <joint name="rotor_3_joint" type="continuous">
+    <parent link="base_link"/><child link="rotor_3"/>
+    <origin xyz="0.1768 -0.1768 0.05"/><axis xyz="0 0 1"/>
+  </joint>
+
+  <link name="gimbal_yaw_link"/>
+  <joint name="gimbal_yaw" type="revolute">
+    <parent link="base_link"/><child link="gimbal_yaw_link"/>
+    <origin xyz="0.08 0 -0.06"/><axis xyz="0 0 1"/>
+    <limit lower="-3.14" upper="3.14" effort="1" velocity="1"/>
+  </joint>
+  <link name="gimbal_pitch_link">
+    <visual><geometry><sphere radius="0.03"/></geometry></visual>
+  </link>
+  <joint name="gimbal_pitch" type="revolute">
+    <parent link="gimbal_yaw_link"/><child link="gimbal_pitch_link"/>
+    <origin xyz="0 0 -0.02"/><axis xyz="0 1 0"/>
+    <limit lower="-0.5" upper="1.57" effort="1" velocity="1"/>
+  </joint>
+
+  <gazebo reference="gimbal_pitch_link">
+    <sensor type="camera" name="gimbal_cam">
+      <pose>0.03 0 0 0 0 0</pose>
+      <camera>
+        <horizontal_fov>1.2</horizontal_fov>
+        <image><width>640</width><height>480</height></image>
+      </camera>
+    </sensor>
+  </gazebo>
+</robot>
