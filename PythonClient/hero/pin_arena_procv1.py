@@ -64,6 +64,16 @@ def main():
         else:
             print("  %-22s -> ID %d FAILED" % (name, sid))
 
+    # *_obstacles arena copies (2026-10-05): every Obstacle_* actor (crashed helicopters, cars, trees) is pinned
+    # to seg ID 0 so its default (mesh-name-hashed) ID can never land on a terrain-class colour. The extractor
+    # treats non-palette-coloured in-band voxels as geometric obstacles, which is what these are meant to be.
+    # Harmless on the original arenas (no match -> False, nothing pinned).
+    try:
+        ob = c.simSetSegmentationObjectID("Obstacle_.*", 0, True)
+        print("obstacle actors (Obstacle_.*) -> ID 0 : %s" % ob)
+    except Exception as e:
+        print("obstacle pin skipped (%s)" % type(e).__name__)
+
     # report road's palette colour so the launch class_colors[1] can be kept in sync
     try:
         cmap = c.simGetSegmentationColorMap()
