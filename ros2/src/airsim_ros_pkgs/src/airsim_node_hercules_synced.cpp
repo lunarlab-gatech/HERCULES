@@ -857,7 +857,9 @@ private:
         while (running_ && rclcpp::ok()) {
             const auto tick_t0 = std::chrono::steady_clock::now();
             try {
-                if (peer_avoid_) proximity_governor(static_cast<double>(step) * sync_dt_);
+                // governor only once every vehicle has a cached pose (tick 1 found all four at the
+                // origin and logged four phantom yields on the 2026-10-12 demo)
+                if (peer_avoid_ && step > 0) proximity_governor(static_cast<double>(step) * sync_dt_);
                 for (auto &vp : vehicles_) apply_controls(*vp);
                 client_->simContinueForTime(sync_dt_); // advance SIM by dt, then frozen
                 step++;
