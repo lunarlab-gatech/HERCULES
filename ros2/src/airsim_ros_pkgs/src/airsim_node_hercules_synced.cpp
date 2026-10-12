@@ -119,6 +119,13 @@ struct Vehicle
 
     std::atomic<double> cmd_target_speed{0.0};   // desired speed setpoint (m/s, signed) from /cmd_vel
     std::atomic<double> terrain_max_speed{1e9};  // per-class cap from /<vehicle>/max_speed
+    // PROXIMITY GOVERNOR state (2026-10-12): speed cap from the nearest other vehicle ahead, computed
+    // once per tick from the cached global poses (see proximity_governor); 1e9 = no vehicle near.
+    double peer_max_speed = 1e9;
+    int peer_idx = -1;                 // index of the vehicle being yielded to (-1 none)
+    double yield_since = -1.0;         // sim time the current yield began (-1 not yielding)
+    double yield_total_s = 0.0;        // diagnostics: cumulative yield time this run
+    int yield_events = 0;
     rclcpp::Subscription<std_msgs::msg::Float64>::SharedPtr max_speed_sub;
     std::atomic<double> cmd_steering{0.0};
     std::atomic<double> last_speed{0.0};          // car's current speed (m/s), cached each tick
@@ -249,6 +256,21 @@ public:
         follow_xte_slow_ = declare_parameter<double>("follow_xte_slow", 0.3);              // above this: half speed
         follow_corner_slow_deg_ = declare_parameter<double>("follow_corner_slow_deg", 50.0); // turn within lookahead -> 0.35 speed
         follow_diag_every_ = declare_parameter<int>("follow_diag_every", 5);                 // ticks between /follow_diag msgs
+        // PROXIMITY GOVERNOR (2026-10-12): the UGVPawn mesh has no collision with other vehicles
+        // (PHYSICS_ONLY, ignores the Vehicle/Pawn channels), so robots drive through each other.
+        // Pure speed governor on the GROUND-TRUTH poses this node already caches each tick -- no
+        // map, planner or coordinator change: for each vehicle, the nearest OTHER vehicle inside
+        // the forward cone (|bearing| < peer_cone_deg) and closer than peer_slow_m scales the
+        // follower's speed cap linearly to 0 at peer_stop_m. Head-on: the vehicle listed FIRST
+        // in `vehicles` keeps driving (fixed priority), the other yields; after peer_yield_timeout_s
+        // of continuous yielding the yielder takes priority so two vehicles never wait forever.
+        // Behind a vehicle that is itself stopped the same timeout applies. Off by default: the
+        // 54 results runs were recorded without it; any run with it on is a separate population.
+        peer_avoid_ = declare_parameter<bool>("peer_avoid", false);
+        peer_slow_m_ = declare_parameter<double>("peer_slow_m", 4.0);
+        peer_stop_m_ = declare_parameter<double>("peer_stop_m", 1.5);
+        peer_cone_deg_ = declare_parameter<double>("peer_cone_deg", 70.0);
+        peer_yield_timeout_s_ = declare_parameter<double>("peer_yield_timeout_s", 8.0);
 
         include_scene_rgb_ = declare_parameter<bool>("include_scene_rgb", false);
 
@@ -361,6 +383,8 @@ public:
 
         {
             std::string names;
+            RCLCPP_INFO(get_logger(), "hercules_synced_node: PROXIMITY GOVERNOR %s (slow %.1f m, stop %.1f m, cone %.0f deg, yield timeout %.0f s, priority = vehicle order)",
+                        peer_avoid_ ? "ON" : "off", peer_slow_m_, peer_stop_m_, peer_cone_deg_, peer_yield_timeout_s_);
             for (const auto &vp : vehicles_) names += (names.empty() ? "" : ",") + vp->name;
             if (sync_mode_ == "lockstep") {
                 RCLCPP_WARN(get_logger(),
@@ -467,7 +491,7 @@ public:
         if (n < 2) {                                   // single point: drive straight at it
             const double a = normalizeAngle(std::atan2(path[0].second - py, path[0].first - px) - yaw);
             ctrl.steering = std::clamp(a * 2.0, -1.0, 1.0);
-            speed_loop(v, ctrl, speed_abs, std::min(follow_align_speed_, v.terrain_max_speed.load()), false);
+            speed_loop(v, ctrl, speed_abs, std::min({follow_align_speed_, v.terrain_max_speed.load(), v.peer_max_speed}), false);
             return true;
         }
         // 1. PROJECTION onto the polyline, searched in a window around the current segment so a
@@ -525,7 +549,15 @@ public:
         v.alpha = alpha;
         v.path_max_xte = std::max(v.path_max_xte, best); v.path_sum_xte += best; v.path_n++;
         const double enter = follow_align_enter_deg_ * M_PI / 180.0, exit = follow_align_exit_deg_ * M_PI / 180.0;
-        const double vcap = std::min(follow_desired_velocity_, v.terrain_max_speed.load());
+        const double vcap = std::min({follow_desired_velocity_, v.terrain_max_speed.load(), v.peer_max_speed});
+        // YIELD: a vehicle whose peer cap is (near) zero brakes and holds, whatever follower mode it is in
+        // -- a K-turn in progress must not swing into the other vehicle either. It resumes from TRACK
+        // (fmode 0) or from ALIGN_BRAKE (3), which re-evaluates the heading, never mid-leg.
+        if (peer_avoid_ && v.peer_max_speed < 0.02) {
+            ctrl.throttle = 0.0; ctrl.brake = 1.0; ctrl.steering = 0.0; v.vel_int = 0.0;
+            if (v.fmode == 1 || v.fmode == 2) v.fmode = 3;
+            return true;
+        }
         // 3. MODE transitions
         if (v.fmode == 0 && std::fabs(alpha) > enter) {
             v.fmode = 3;                                 // brake first, then start the K-turn
@@ -640,6 +672,52 @@ public:
             std_msgs::msg::String m; m.data = buf; v.diag_pub->publish(m);
         }
         return true;
+    }
+
+    // PROXIMITY GOVERNOR: once per tick, before the controls, from the poses cached by the previous
+    // tick's publish_odom_and_tf (global NED). Writes v.peer_max_speed for every vehicle.
+    void proximity_governor(double sim_now)
+    {
+        const size_t n = vehicles_.size();
+        const double cone = peer_cone_deg_ * M_PI / 180.0;
+        for (size_t i = 0; i < n; ++i) {
+            Vehicle &v = *vehicles_[i];
+            double cap = 1e9; int who = -1; double dmin = 1e9, dbear = 0.0;
+            for (size_t j = 0; j < n; ++j) {
+                if (j == i) continue;
+                const Vehicle &o = *vehicles_[j];
+                const double dx = o.last_ned_x - v.last_ned_x, dy = o.last_ned_y - v.last_ned_y;
+                const double d = std::sqrt(dx * dx + dy * dy);
+                if (d >= peer_slow_m_ || d >= dmin) continue;
+                const double bearing = normalizeAngle(std::atan2(dy, dx) - v.last_yaw_ned);
+                if (std::fabs(bearing) > cone) continue;            // only vehicles AHEAD slow us down
+                // PRIORITY: head-on (the other also sees us in its cone) -> the vehicle listed first
+                // keeps driving unless it has been yielding past the timeout; a vehicle that is
+                // only behind/beside us never makes us yield.
+                const double ob = normalizeAngle(std::atan2(-dy, -dx) - o.last_yaw_ned);
+                const bool head_on = std::fabs(ob) <= cone;
+                const bool i_has_priority = (i < j);
+                const bool my_timeout = v.yield_since >= 0.0 && (sim_now - v.yield_since) > peer_yield_timeout_s_;
+                const bool other_timeout = o.yield_since >= 0.0 && (sim_now - o.yield_since) > peer_yield_timeout_s_ && o.peer_idx == static_cast<int>(i);
+                if (head_on && i_has_priority && !other_timeout) continue;   // the other one yields
+                if (my_timeout && !other_timeout) continue;                  // waited long enough: go
+                dmin = d; dbear = bearing; who = static_cast<int>(j);
+                cap = std::clamp((d - peer_stop_m_) / std::max(peer_slow_m_ - peer_stop_m_, 1e-3), 0.0, 1.0) * follow_desired_velocity_;
+            }
+            const bool yielding_now = who >= 0;
+            const bool was_yielding = v.yield_since >= 0.0;
+            if (yielding_now && !was_yielding) {
+                v.yield_since = sim_now; v.yield_events++;
+                RCLCPP_INFO(get_logger(), "[%s] YIELD to %s: %.1f m at %.0f deg -> cap %.2f m/s (sim t %.1f)",
+                            v.name.c_str(), vehicles_[who]->name.c_str(), dmin, dbear * 180.0 / M_PI, cap, sim_now);
+            } else if (!yielding_now && was_yielding) {
+                v.yield_total_s += sim_now - v.yield_since;
+                RCLCPP_INFO(get_logger(), "[%s] YIELD over after %.1f s (total %.1f s, %d events)",
+                            v.name.c_str(), sim_now - v.yield_since, v.yield_total_s, v.yield_events);
+                v.yield_since = -1.0;
+            }
+            v.peer_idx = who; v.peer_max_speed = cap;
+        }
     }
 
     void apply_controls(Vehicle &v)
@@ -779,6 +857,7 @@ private:
         while (running_ && rclcpp::ok()) {
             const auto tick_t0 = std::chrono::steady_clock::now();
             try {
+                if (peer_avoid_) proximity_governor(static_cast<double>(step) * sync_dt_);
                 for (auto &vp : vehicles_) apply_controls(*vp);
                 client_->simContinueForTime(sync_dt_); // advance SIM by dt, then frozen
                 step++;
@@ -825,7 +904,9 @@ private:
                     if (stuck_nudge_) {
                         const double sim_now = static_cast<double>(step) * sync_dt_;
                         const auto &pp = car_state.kinematics_estimated.pose.position;
-                        if (v.stuck_at < 0.0 || v.follow_path.empty()) {
+                        // a YIELDING vehicle is meant to stand still: keep re-anchoring so the
+                        // stuck detector never teleports it backward into whatever it yielded to
+                        if (v.stuck_at < 0.0 || v.follow_path.empty() || (peer_avoid_ && v.yield_since >= 0.0)) {
                             v.stuck_ax = pp.x(); v.stuck_ay = pp.y(); v.stuck_at = sim_now;
                         } else if (sim_now - v.stuck_at >= stuck_window_s_) {
                             const double moved = std::hypot(pp.x() - v.stuck_ax,
@@ -1249,6 +1330,7 @@ private:
     double follow_align_throttle_ = 0.05, follow_align_vmax_ = 1.0, follow_track_min_speed_ = 0.3;
     double follow_softstart_v_ = 0.15, follow_softstart_throttle_ = 0.08, follow_softstart_steer_ = 0.6;
     double follow_lookahead_min_ = 0.5, follow_lookahead_max_ = 1.2, follow_lookahead_gain_ = 1.2;
+    bool peer_avoid_ = false; double peer_slow_m_ = 4.0, peer_stop_m_ = 1.5, peer_cone_deg_ = 70.0, peer_yield_timeout_s_ = 8.0;
     double follow_wheelbase_ = 1.0, follow_max_steer_deg_ = 50.0, follow_xte_slow_ = 0.3, follow_corner_slow_deg_ = 50.0;
     int follow_diag_every_ = 5;
     bool include_scene_rgb_ = false;
