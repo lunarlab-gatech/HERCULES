@@ -271,6 +271,7 @@ public:
         peer_stop_m_ = declare_parameter<double>("peer_stop_m", 1.5);
         peer_cone_deg_ = declare_parameter<double>("peer_cone_deg", 70.0);
         peer_yield_timeout_s_ = declare_parameter<double>("peer_yield_timeout_s", 8.0);
+        peer_lane_half_m_ = declare_parameter<double>("peer_lane_half_m", 1.2);   // |cross-track| below this = in my path (Husky ~1 m wide)
 
         include_scene_rgb_ = declare_parameter<bool>("include_scene_rgb", false);
 
@@ -383,8 +384,8 @@ public:
 
         {
             std::string names;
-            RCLCPP_INFO(get_logger(), "hercules_synced_node: PROXIMITY GOVERNOR %s (slow %.1f m, stop %.1f m, cone %.0f deg, yield timeout %.0f s, priority = vehicle order)",
-                        peer_avoid_ ? "ON" : "off", peer_slow_m_, peer_stop_m_, peer_cone_deg_, peer_yield_timeout_s_);
+            RCLCPP_INFO(get_logger(), "hercules_synced_node: PROXIMITY GOVERNOR %s (slow %.1f m, stop %.1f m, cone %.0f deg, lane half-width %.1f m, yield timeout %.0f s, priority = vehicle order; hard stop for anything in my path)",
+                        peer_avoid_ ? "ON" : "off", peer_slow_m_, peer_stop_m_, peer_cone_deg_, peer_lane_half_m_, peer_yield_timeout_s_);
             for (const auto &vp : vehicles_) names += (names.empty() ? "" : ",") + vp->name;
             if (sync_mode_ == "lockstep") {
                 RCLCPP_WARN(get_logger(),
@@ -690,17 +691,30 @@ public:
                 const double d = std::sqrt(dx * dx + dy * dy);
                 if (d >= peer_slow_m_ || d >= dmin) continue;
                 const double bearing = normalizeAngle(std::atan2(dy, dx) - v.last_yaw_ned);
-                if (std::fabs(bearing) > cone) continue;            // only vehicles AHEAD slow us down
-                // PRIORITY: head-on (the other also sees us in its cone) -> the vehicle listed first
-                // keeps driving unless it has been yielding past the timeout; a vehicle that is
-                // only behind/beside us never makes us yield.
-                const double ob = normalizeAngle(std::atan2(-dy, -dx) - o.last_yaw_ned);
-                const bool head_on = std::fabs(ob) <= cone;
-                const bool i_has_priority = (i < j);
-                const bool my_timeout = v.yield_since >= 0.0 && (sim_now - v.yield_since) > peer_yield_timeout_s_;
-                const bool other_timeout = o.yield_since >= 0.0 && (sim_now - o.yield_since) > peer_yield_timeout_s_ && o.peer_idx == static_cast<int>(i);
-                if (head_on && i_has_priority && !other_timeout) continue;   // the other one yields
-                if (my_timeout && !other_timeout) continue;                  // waited long enough: go
+                // body-frame position of the other vehicle: along-track (ahead of me) and cross-track
+                const double along = dx * std::cos(v.last_yaw_ned) + dy * std::sin(v.last_yaw_ned);
+                const double cross = -dx * std::sin(v.last_yaw_ned) + dy * std::cos(v.last_yaw_ned);
+                const bool in_path = along > 0.0 && std::fabs(cross) < peer_lane_half_m_;
+                const bool other_stopped = o.last_speed.load() < 0.05;
+                if (std::fabs(bearing) > cone && !in_path) continue;   // only vehicles AHEAD slow us down
+                // HARD RULE (crossing test 2026-10-12: the priority vehicle drove straight through the
+                // stopped yielder on a shared line): a vehicle IN MY PATH that is stopped, or inside the
+                // stop distance, caps me whatever the priority -- nobody drives into anybody. Priority
+                // only decides who slows first in the approach band. A yielder parked BESIDE my line
+                // (|cross| >= peer_lane_half_m, the usual crossing case) does not hold me.
+                const bool hard = in_path && (other_stopped || d < peer_stop_m_);
+                if (!hard) {
+                    // PRIORITY: head-on (the other also sees us in its cone) -> the vehicle listed first
+                    // keeps driving unless it has been yielding past the timeout; a vehicle that is
+                    // only behind/beside us never makes us yield.
+                    const double ob = normalizeAngle(std::atan2(-dy, -dx) - o.last_yaw_ned);
+                    const bool head_on = std::fabs(ob) <= cone;
+                    const bool i_has_priority = (i < j);
+                    const bool my_timeout = v.yield_since >= 0.0 && (sim_now - v.yield_since) > peer_yield_timeout_s_;
+                    const bool other_timeout = o.yield_since >= 0.0 && (sim_now - o.yield_since) > peer_yield_timeout_s_ && o.peer_idx == static_cast<int>(i);
+                    if (head_on && i_has_priority && !other_timeout) continue;   // the other one yields
+                    if (my_timeout && !other_timeout) continue;                  // waited long enough: go
+                }
                 dmin = d; dbear = bearing; who = static_cast<int>(j);
                 cap = std::clamp((d - peer_stop_m_) / std::max(peer_slow_m_ - peer_stop_m_, 1e-3), 0.0, 1.0) * follow_desired_velocity_;
             }
@@ -1332,7 +1346,7 @@ private:
     double follow_align_throttle_ = 0.05, follow_align_vmax_ = 1.0, follow_track_min_speed_ = 0.3;
     double follow_softstart_v_ = 0.15, follow_softstart_throttle_ = 0.08, follow_softstart_steer_ = 0.6;
     double follow_lookahead_min_ = 0.5, follow_lookahead_max_ = 1.2, follow_lookahead_gain_ = 1.2;
-    bool peer_avoid_ = false; double peer_slow_m_ = 4.0, peer_stop_m_ = 1.5, peer_cone_deg_ = 70.0, peer_yield_timeout_s_ = 8.0;
+    bool peer_avoid_ = false; double peer_slow_m_ = 4.0, peer_stop_m_ = 1.5, peer_cone_deg_ = 70.0, peer_yield_timeout_s_ = 8.0, peer_lane_half_m_ = 1.2;
     double follow_wheelbase_ = 1.0, follow_max_steer_deg_ = 50.0, follow_xte_slow_ = 0.3, follow_corner_slow_deg_ = 50.0;
     int follow_diag_every_ = 5;
     bool include_scene_rgb_ = false;
