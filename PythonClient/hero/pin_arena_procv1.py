@@ -54,6 +54,15 @@ def main():
     if not ok:
         print("WARNING: terrain pin failed -- ground class broken")
 
+    # VIDEO levels (2026-10-25): the hero-video copy ArenaProcV2s_video carries EXTERIOR terrain sheets
+    # SemSheet_<class>_outer continuing the arena's classes across the landscape; pin them to the same IDs when
+    # present. Reported separately so the results levels' "7/7" tally is unchanged (they have no _outer sheets).
+    n_outer = 0
+    for name, sid in sorted(LAYER_IDS.items()):
+        if c.simSetSegmentationObjectID(name + "_outer", sid, False):
+            n_outer += 1
+    if n_outer:
+        print("  outer sheets pinned: %d/%d" % (n_outer, len(LAYER_IDS)))
     n = 0
     for name, sid in sorted(LAYER_IDS.items()):
         if c.simSetSegmentationObjectID(name, sid, False):
