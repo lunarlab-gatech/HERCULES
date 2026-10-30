@@ -47,8 +47,14 @@ Third-party inputs (not in this repo): `~/multi-robot-coordination/go2_thirdpart
 * Terrain physics: the heightfield lives on a MuJoCo **mocap** body (a world geom's `pos` cannot be moved at
   runtime -- that bug cost an hour). Offline: 20 % ramps are climbed, a 1.5 m wall blocks the dog, an 8 cm step
   stalls the blind policy (crouches against it).
-* The MuJoCo `scene.xml` floor is kept 20 m below as a safety net; the window is +-1.5 m at 10 cm (5 cm cells made the
-  gait stumble through heightfield multi-contact artifacts under the small foot spheres), refreshed ~12 Hz.
+* Contact model: on flat ground (relief < 3 cm over the central 1.2 m of the window) the dog stands on a plane at the
+  local ground height (4 clean foot contacts; the heightfield is switched off) -- MuJoCo heightfield multi-contact
+  under the 2.2 cm foot spheres made the HIMLoco gait collapse on roughly half the starts, depending on where the
+  feet met the lattice. With relief the heightfield (10 cm cells, +-1.5 m window, ~12 Hz) takes over and the plane
+  drops 20 m. Both live on mocap bodies.
+* Start-up: the policy balances at zero command for 1 s before velocity commands apply; a collapse guard re-stands the
+  dog if its body stays below 0.19 m for 1 s (logged as "recovery N"). Reconnecting bridges re-anchor the MuJoCo
+  frame at the dog's current pose (no teleport back to the spawn).
 
 ## Wire protocol (little-endian, TCP)
 * bridge -> pawn `POSE` 80 B: `uint32 0x474F3200, float x y z (m), float qw qx qy qz, float joints[12]` (rad, FL FR RL RR x hip thigh calf), MuJoCo frame. Identical to S2R_Go2Sim, so that bridge also works (flat floor, pawn follows its own ground trace).

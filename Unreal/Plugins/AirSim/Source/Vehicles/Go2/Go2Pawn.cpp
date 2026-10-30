@@ -279,6 +279,11 @@ void AGo2Pawn::pumpSocket(float dt)
                 rx_.Reset();
                 tx_.Reset();
                 hfield_mode_ = want_feedback_ = want_grid_ = false;
+                // A (re)connecting bridge starts its MuJoCo world at the dog's CURRENT pose: anchor again here
+                // (a second bridge used to teleport the dog back to the first anchor, 5 m through the air, and
+                // the stumble that followed collapsed the gait on every other start).
+                anchored_ = false;
+                have_ground_ = false;
                 grid_n_ = 0;
                 UE_LOG(LogGo2, Log, TEXT("%s: bridge connected from %s"), *GetName(), *addr->ToString(true));
             }
@@ -356,8 +361,12 @@ void AGo2Pawn::handlePose(const FGo2PosePacket& p)
     {
         anchored_ = true;
         anchor_loc_ = GetActorLocation();
+        anchor_yaw_ = FRotator(0.f, GetActorRotation().Yaw, 0.f).Quaternion();
         mj_x0_ = p.body_x;
         mj_y0_ = p.body_y;
+        float gz = 0.f; // MuJoCo z = 0 is the ground under the dog at anchoring time
+        if (traceGround(anchor_loc_, anchor_loc_.Z + TerrainProbeUpCm, gz)) ground_z0_ = gz;
+        sweep_row_ = 0;
         UE_LOG(LogGo2, Log, TEXT("%s: anchored MuJoCo (%.2f, %.2f) at UE (%.0f, %.0f, ground %.0f)"), *GetName(),
                mj_x0_, mj_y0_, anchor_loc_.X, anchor_loc_.Y, ground_z0_);
     }

@@ -129,7 +129,6 @@ class Go2Sim:
                   .replace("HF_HALF", "%.4f" % self.grid_half).replace("HF_ELEV", "%.3f" % self.HF_ELEV))
         if not terrain:
             # flat-floor mode (the Unreal pawn then follows its own ground trace): plain floor at z=0, no hfield
-            xml = xml.replace('pos="0 0 -20"', 'pos="0 0 0"')
             import re
             xml = re.sub(r'<body name="terrain_body".*?</body>', '', xml, flags=re.S)
             xml = "\n".join(l for l in xml.splitlines() if '<hfield name="terrain"' not in l)
@@ -140,9 +139,15 @@ class Go2Sim:
         self.data = mujoco.MjData(self.model)
         self.hf_geom = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "terrain") if terrain else -1
         self.hf_mocap = -1
+        self.floor_mocap = self.model.body_mocapid[mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "floor_body")]
+        self.floor_geom = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "floor")
+        self.contact_mode = "flat"   # "flat": plane at the local ground height, hfield off | "relief": hfield on
+        self.FLAT_RELIEF = 0.03      # m of relief in the window below which the plane is used
         if terrain:
             self.model.hfield_data[:] = 0.0
             self.hf_mocap = self.model.body_mocapid[mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "terrain_body")]
+            self.model.geom_contype[self.hf_geom] = 0
+            self.model.geom_conaffinity[self.hf_geom] = 0
         self.imu_site = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "imu")
         self.policy = LocoPolicy(policy_dir, policy) if policy else None
         self.stand_pose = self.policy.DEFAULT_DOF[self.policy.inv_perm].copy() if self.policy else STAND_POSE.copy()
@@ -205,12 +210,19 @@ class Go2Sim:
         return 1 - 2 * (x * x + y * y) > 0.5   # R[2][2]
 
     # ---- commands (thread-safe) ----
+    WARMUP_STEPS = 50   # policy balances at zero command for 1 s before velocity commands are applied
+
     def set_velocity(self, vx, vy=0.0, vyaw=0.0):
         with self.lock:
-            self.cmd[:] = (vx, vy, vyaw)
+            self.cmd_wanted = np.array((vx, vy, vyaw), float)
             if self.policy and self.mode != "policy":
                 self.policy.reset()
                 self.mode = "policy"
+                self.policy_enter_step = self.policy_steps
+            if self.policy_steps - getattr(self, "policy_enter_step", 0) >= self.WARMUP_STEPS:
+                self.cmd[:] = self.cmd_wanted
+            else:
+                self.cmd[:] = 0.0
 
     def set_pose(self, target, duration=1.5):
         with self.lock:
@@ -258,6 +270,10 @@ class Go2Sim:
                 s = s * s * (3 - 2 * s)
                 self.q_target = self.pose_from + (self.pose_target - self.pose_from) * s
         if mode == "policy" and self.policy:
+            if self.policy_steps - getattr(self, "policy_enter_step", 0) == self.WARMUP_STEPS and hasattr(self, "cmd_wanted"):
+                with self.lock:
+                    self.cmd[:] = self.cmd_wanted
+                    cmd = self.cmd.copy()
             q, dq = d.qpos[7:19], d.qvel[6:18]
             R = np.zeros(9)
             mujoco.mju_quat2Mat(R, d.qpos[3:7])
@@ -301,6 +317,21 @@ class Go2Sim:
         self.data.mocap_pos[self.hf_mocap] = (cx, cy, zmin)   # mocap body: applied at the next step
         self.last_grid = (origin_x, origin_y, cell, grid)
         self.grid_updates += 1
+        # flat-floor fast path (see go2_scene_hfield.xml): relief judged over the central +-0.6 m of the window
+        c0 = max(0, int(round(((self.data.qpos[0] - origin_x) / cell) - 0.6 / cell))); c1 = min(n, c0 + int(round(1.2 / cell)) + 1)
+        r0 = max(0, int(round(((self.data.qpos[1] - origin_y) / cell) - 0.6 / cell))); r1 = min(n, r0 + int(round(1.2 / cell)) + 1)
+        core = grid[r0:r1, c0:c1] if (r1 > r0 and c1 > c0) else grid
+        relief = float(core.max() - core.min())
+        if relief < self.FLAT_RELIEF:
+            self.data.mocap_pos[self.floor_mocap] = (0.0, 0.0, float(np.median(core)))
+            if self.contact_mode != "flat":
+                self.model.geom_contype[self.hf_geom] = 0; self.model.geom_conaffinity[self.hf_geom] = 0
+                self.contact_mode = "flat"
+        else:
+            self.data.mocap_pos[self.floor_mocap] = (0.0, 0.0, -20.0)
+            if self.contact_mode != "relief":
+                self.model.geom_contype[self.hf_geom] = 1; self.model.geom_conaffinity[self.hf_geom] = 1
+                self.contact_mode = "relief"
         self.last_grid_stats = (float(grid.min()), float(grid.max()), float(grid.mean()), cx, cy)
 
 
@@ -406,8 +437,42 @@ class Go2Bridge:
                 pass
             self.sock = None
 
+    def _collapse_guard(self):
+        """The HIMLoco gait occasionally sags onto its belly right after taking over (start-up, lattice-dependent).
+        If the body stays below 0.19 m for 1 s in policy mode (not a commanded sit), re-stand and re-enter the
+        policy; if it ever topples, reset the base upright in place. Counts are logged."""
+        sim = self.sim
+        z = sim.body_pose()[2]
+        low = sim.mode == "policy" and z < 0.19
+        if not low and sim.upright():
+            self._low_since = None
+            return
+        if self._low_since is None:
+            self._low_since = sim.time
+            return
+        if sim.time - self._low_since < 1.0:
+            return
+        self._low_since = None
+        self.recoveries += 1
+        wanted = getattr(sim, "cmd_wanted", sim.cmd.copy())
+        if not sim.upright():
+            with sim.lock:
+                yaw = sim.yaw()
+                sim.data.qpos[2] = sim.ground_height(sim.data.qpos[0], sim.data.qpos[1]) + 0.35
+                sim.data.qpos[3:7] = (math.cos(yaw / 2), 0.0, 0.0, math.sin(yaw / 2))
+                sim.data.qvel[:] = 0.0
+            self.log("recovery %d: toppled -> reset upright" % self.recoveries)
+        else:
+            self.log("recovery %d: collapsed (z=%.2f) -> re-stand" % (self.recoveries, z))
+        sim.stand(1.0)
+        self._resume_at = sim.time + 1.5
+        self._resume_cmd = wanted
+
     def _loop(self):
         sim = self.sim
+        self._low_since = None
+        self.recoveries = 0
+        self._resume_at = None
         step = sim.DT * sim.DECIMATION
         wall_t0 = time.time() - sim.time
         settle_until = sim.time + 1.0      # stand on fixed gains before the policy takes over
@@ -432,6 +497,10 @@ class Go2Bridge:
                     wall_t0 = time.time() - sim.time - 0.25
             sim.step_control()
             self.send_pose()
+            self._collapse_guard()
+            if self._resume_at is not None and sim.time >= self._resume_at:
+                self._resume_at = None
+                sim.set_velocity(*self._resume_cmd)
             if sim.time >= settle_until and sim.mode == "pose" and sim.policy and np.allclose(sim.pose_target, sim.stand_pose) and not getattr(self, "_policy_started", False):
                 self._policy_started = True
                 sim.set_velocity(0.0, 0.0, 0.0)
@@ -451,7 +520,7 @@ class Go2Bridge:
                 if sim.last_grid_stats:
                     g = sim.last_grid_stats
                     nc = sum(1 for c in sim.data.contact[:sim.data.ncon])
-                    self.log("  grid min=%.3f max=%.3f mean=%.3f centre=(%.2f, %.2f) contacts=%d" % (g[0], g[1], g[2], g[3], g[4], nc))
+                    self.log("  grid min=%.3f max=%.3f mean=%.3f centre=(%.2f, %.2f) contacts=%d mode=%s" % (g[0], g[1], g[2], g[3], g[4], nc, sim.contact_mode))
 
 
 def main():
