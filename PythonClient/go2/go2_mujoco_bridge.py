@@ -146,8 +146,7 @@ class Go2Sim:
         if terrain:
             self.model.hfield_data[:] = 0.0
             self.hf_mocap = self.model.body_mocapid[mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "terrain_body")]
-            self.model.geom_contype[self.hf_geom] = 0
-            self.model.geom_conaffinity[self.hf_geom] = 0
+            self.data.mocap_pos[self.hf_mocap] = (0.0, 0.0, -0.07)   # below the plane until the first grid arrives
         self.imu_site = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_SITE, "imu")
         self.policy = LocoPolicy(policy_dir, policy) if policy else None
         self.stand_pose = self.policy.DEFAULT_DOF[self.policy.inv_perm].copy() if self.policy else STAND_POSE.copy()
@@ -309,29 +308,25 @@ class Go2Sim:
         if not np.all(np.isfinite(grid)) or np.abs(grid).max() > 20.0 or abs(origin_x) > 1e4 or abs(origin_y) > 1e4:
             self.bad_grids = getattr(self, "bad_grids", 0) + 1   # desynced / garbage packet: ignore
             return
-        zmin = float(grid.min()) - 0.02
-        data = np.clip((grid - zmin) / self.HF_ELEV, 0.0, 1.0)
-        self.model.hfield_data[:] = data.reshape(-1)
         cx = origin_x + 0.5 * (n - 1) * cell
         cy = origin_y + 0.5 * (n - 1) * cell
-        self.data.mocap_pos[self.hf_mocap] = (cx, cy, zmin)   # mocap body: applied at the next step
         self.last_grid = (origin_x, origin_y, cell, grid)
         self.grid_updates += 1
-        # flat-floor fast path (see go2_scene_hfield.xml): relief judged over the central +-0.6 m of the window
+        # Hybrid contact model (see go2_scene_hfield.xml): the plane always sits at the lowest ground of the central
+        # +-0.6 m of the window and carries everything within 3 cm of it (4 clean foot contacts); only cells that
+        # rise more than 3 cm above the plane stay in the heightfield (ramps, steps, obstacle tops as cliffs) --
+        # every other cell is pushed 5 cm below the plane so the feet never touch heightfield prisms on flat ground.
         c0 = max(0, int(round(((self.data.qpos[0] - origin_x) / cell) - 0.6 / cell))); c1 = min(n, c0 + int(round(1.2 / cell)) + 1)
         r0 = max(0, int(round(((self.data.qpos[1] - origin_y) / cell) - 0.6 / cell))); r1 = min(n, r0 + int(round(1.2 / cell)) + 1)
         core = grid[r0:r1, c0:c1] if (r1 > r0 and c1 > c0) else grid
-        relief = float(core.max() - core.min())
-        if relief < self.FLAT_RELIEF:
-            self.data.mocap_pos[self.floor_mocap] = (0.0, 0.0, float(np.median(core)))
-            if self.contact_mode != "flat":
-                self.model.geom_contype[self.hf_geom] = 0; self.model.geom_conaffinity[self.hf_geom] = 0
-                self.contact_mode = "flat"
-        else:
-            self.data.mocap_pos[self.floor_mocap] = (0.0, 0.0, -20.0)
-            if self.contact_mode != "relief":
-                self.model.geom_contype[self.hf_geom] = 1; self.model.geom_conaffinity[self.hf_geom] = 1
-                self.contact_mode = "relief"
+        plane_z = float(core.min())
+        self.data.mocap_pos[self.floor_mocap] = (0.0, 0.0, plane_z)
+        proud = grid > plane_z + self.FLAT_RELIEF
+        hf = np.where(proud, grid, plane_z - 0.05)
+        zmin = float(hf.min()) - 0.02
+        self.model.hfield_data[:] = np.clip((hf - zmin) / self.HF_ELEV, 0.0, 1.0).reshape(-1)
+        self.data.mocap_pos[self.hf_mocap] = (cx, cy, zmin)
+        self.contact_mode = "relief" if proud.any() else "flat"
         self.last_grid_stats = (float(grid.min()), float(grid.max()), float(grid.mean()), cx, cy)
 
 

@@ -45,13 +45,14 @@ Third-party inputs (not in this repo): `~/multi-robot-coordination/go2_thirdpart
   trunk (`GO2_TURN_ASSIST_KP`, default 30 Nm s/rad, clipped +-24 Nm): ~8 deg/s at 0.8 rad/s. For fast turns use
   `turn(deg, mode="pivot")` / script `pivot:90`: a kinematic pivot (legs hold the stand pose, feet slide) at 1 rad/s.
 * Terrain physics: the heightfield lives on a MuJoCo **mocap** body (a world geom's `pos` cannot be moved at
-  runtime -- that bug cost an hour). Offline: 20 % ramps are climbed, a 1.5 m wall blocks the dog, an 8 cm step
-  stalls the blind policy (crouches against it).
-* Contact model: on flat ground (relief < 3 cm over the central 1.2 m of the window) the dog stands on a plane at the
-  local ground height (4 clean foot contacts; the heightfield is switched off) -- MuJoCo heightfield multi-contact
-  under the 2.2 cm foot spheres made the HIMLoco gait collapse on roughly half the starts, depending on where the
-  feet met the lattice. With relief the heightfield (10 cm cells, +-1.5 m window, ~12 Hz) takes over and the plane
-  drops 20 m. Both live on mocap bodies.
+  runtime -- that bug cost an hour).
+* Contact model (hybrid): a plane always sits at the lowest ground of the central 1.2 m of the window and carries
+  everything within 3 cm of it (4 clean foot contacts); only cells rising more than 3 cm above it stay in the
+  heightfield (10 cm cells, +-1.5 m window, ~12 Hz), all other cells are pushed 5 cm below the plane. Reason:
+  MuJoCo heightfield multi-contact under the 2.2 cm foot spheres made the HIMLoco gait collapse on roughly half
+  the starts (lattice-phase dependent) and stand tall and stall when starting next to an obstacle. Both geoms live
+  on mocap bodies. Offline: 20 % ramps up and down, walls, starting next to a wall all fine; an 8 cm step still
+  stalls the blind policy.
 * Start-up: the policy balances at zero command for 1 s before velocity commands apply; a collapse guard re-stands the
   dog if its body stays below 0.19 m for 1 s (logged as "recovery N"). Reconnecting bridges re-anchor the MuJoCo
   frame at the dog's current pose (no teleport back to the spawn).
