@@ -142,7 +142,7 @@ class Go2Sim:
         self.floor_mocap = self.model.body_mocapid[mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "floor_body")]
         self.floor_geom = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_GEOM, "floor")
         self.contact_mode = "flat"   # "flat": plane at the local ground height, hfield off | "relief": hfield on
-        self.FLAT_RELIEF = 0.03      # m of relief in the window below which the plane is used
+        self.FLAT_RELIEF = 0.05      # cells less than this above the plane are carried by the plane (absorbs small artifacts)
         if terrain:
             self.model.hfield_data[:] = 0.0
             self.hf_mocap = self.model.body_mocapid[mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, "terrain_body")]
@@ -293,7 +293,7 @@ class Go2Sim:
             if mode == "pivot":
                 yaw = self.yaw() + self.pivot_rate * self.DT
                 d.qpos[3:7] = (math.cos(yaw / 2), 0.0, 0.0, math.sin(yaw / 2))
-                d.qpos[2] = self.ground_height(d.qpos[0], d.qpos[1]) + 0.30
+                d.qpos[2] = float(self.data.mocap_pos[self.floor_mocap][2]) + 0.30
                 d.qvel[0:6] = 0.0
             mujoco.mj_step(m, d)
 
@@ -437,7 +437,21 @@ class Go2Bridge:
         If the body stays below 0.19 m for 1 s in policy mode (not a commanded sit), re-stand and re-enter the
         policy; if it ever topples, reset the base upright in place. Counts are logged."""
         sim = self.sim
-        z = sim.body_pose()[2]
+        x, y, z = sim.body_pose()[:3]
+        # stall guard: commanded to move (> 0.2 m/s) but the body has not moved 10 cm in 4 s -> same recovery
+        if sim.mode == "policy" and abs(sim.cmd[0]) > 0.2 and self._resume_at is None:
+            if self._stall_ref is None or sim.time - self._stall_ref[0] > 4.0:
+                if self._stall_ref is not None and math.hypot(x - self._stall_ref[1], y - self._stall_ref[2]) < 0.10:
+                    self.recoveries += 1
+                    self.log("recovery %d: stalled (z=%.2f, no motion for 4 s) -> re-stand" % (self.recoveries, z))
+                    self._resume_cmd = getattr(sim, "cmd_wanted", sim.cmd.copy())
+                    sim.stand(1.0)
+                    self._resume_at = sim.time + 1.5
+                    self._stall_ref = None
+                    return
+                self._stall_ref = (sim.time, x, y)
+        else:
+            self._stall_ref = None
         low = sim.mode == "policy" and z < 0.19
         if not low and sim.upright():
             self._low_since = None
@@ -466,6 +480,7 @@ class Go2Bridge:
     def _loop(self):
         sim = self.sim
         self._low_since = None
+        self._stall_ref = None
         self.recoveries = 0
         self._resume_at = None
         step = sim.DT * sim.DECIMATION
