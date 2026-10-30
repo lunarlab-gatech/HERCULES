@@ -202,6 +202,7 @@ void AGo2Pawn::Tick(float dt)
         last_loc_ = now;
     }
     if (client_ && want_feedback_) terrainTick();
+    flushSend();
 
     Super::Tick(dt);
 }
@@ -233,17 +234,28 @@ void AGo2Pawn::closeSockets()
     if (listener_) { listener_->Close(); if (ss) ss->DestroySocket(listener_); listener_ = nullptr; }
 }
 
-bool AGo2Pawn::sendAll(const uint8* data, int32 len)
+void AGo2Pawn::queueSend(const uint8* data, int32 len)
 {
-    if (!client_) return false;
+    if (!client_) return;
+    if (tx_.Num() > (8 << 20)) // reader stalled for a long time: drop the backlog rather than grow forever
+    {
+        tx_.Reset();
+        UE_LOG(LogGo2, Warning, TEXT("%s: feedback backlog dropped (bridge not reading)"), *GetName());
+    }
+    tx_.Append(data, len);
+}
+
+void AGo2Pawn::flushSend()
+{
+    if (!client_ || tx_.Num() == 0) return;
     int32 off = 0;
-    while (off < len)
+    while (off < tx_.Num())
     {
         int32 sent = 0;
-        if (!client_->Send(data + off, len - off, sent) || sent <= 0) return false; // would-block or error: drop
+        if (!client_->Send(tx_.GetData() + off, tx_.Num() - off, sent) || sent <= 0) break; // would block: keep the rest
         off += sent;
     }
-    return true;
+    if (off > 0) tx_.RemoveAt(0, off, false);
 }
 
 void AGo2Pawn::pumpSocket(float dt)
@@ -265,6 +277,7 @@ void AGo2Pawn::pumpSocket(float dt)
                 client_->SetSendBufferSize(sz, sz);
                 client_->SetReceiveBufferSize(sz, sz);
                 rx_.Reset();
+                tx_.Reset();
                 hfield_mode_ = want_feedback_ = want_grid_ = false;
                 grid_n_ = 0;
                 UE_LOG(LogGo2, Log, TEXT("%s: bridge connected from %s"), *GetName(), *addr->ToString(true));
@@ -460,7 +473,8 @@ void AGo2Pawn::sendFeedback(bool with_grid)
     h.origin_x = sweep_ox_;
     h.origin_y = sweep_oy_;
     h.reserved = 0.f;
-    if (!sendAll(reinterpret_cast<const uint8*>(&h), sizeof(h))) return;
+    queueSend(reinterpret_cast<const uint8*>(&h), sizeof(h));
     if (with_grid && grid_n_ > 0)
-        sendAll(reinterpret_cast<const uint8*>(grid_.GetData()), grid_.Num() * sizeof(float));
+        queueSend(reinterpret_cast<const uint8*>(grid_.GetData()), grid_.Num() * sizeof(float));
+    flushSend();
 }

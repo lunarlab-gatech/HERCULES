@@ -47,7 +47,8 @@ Third-party inputs (not in this repo): `~/multi-robot-coordination/go2_thirdpart
 * Terrain physics: the heightfield lives on a MuJoCo **mocap** body (a world geom's `pos` cannot be moved at
   runtime -- that bug cost an hour). Offline: 20 % ramps are climbed, a 1.5 m wall blocks the dog, an 8 cm step
   stalls the blind policy (crouches against it).
-* The MuJoCo `scene.xml` floor is kept 20 m below as a safety net; the window is +-1 m at 5 cm, refreshed ~12 Hz.
+* The MuJoCo `scene.xml` floor is kept 20 m below as a safety net; the window is +-1.5 m at 10 cm (5 cm cells made the
+  gait stumble through heightfield multi-contact artifacts under the small foot spheres), refreshed ~12 Hz.
 
 ## Wire protocol (little-endian, TCP)
 * bridge -> pawn `POSE` 80 B: `uint32 0x474F3200, float x y z (m), float qw qx qy qz, float joints[12]` (rad, FL FR RL RR x hip thigh calf), MuJoCo frame. Identical to S2R_Go2Sim, so that bridge also works (flat floor, pawn follows its own ground trace).

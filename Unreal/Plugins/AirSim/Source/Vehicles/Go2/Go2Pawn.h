@@ -137,7 +137,11 @@ private:
     void pumpSocket(float dt);
     void handlePose(const FGo2PosePacket& p);
     void handleHello(const FGo2HelloPacket& h);
-    bool sendAll(const uint8* data, int32 len);
+    // Outgoing bytes are queued and flushed non-blocking in order, so a feedback packet is never sent
+    // partially (a half-sent grid desynchronised the bridge's parser when the editor stalled).
+    TArray<uint8> tx_;
+    void queueSend(const uint8* data, int32 len);
+    void flushSend();
 
     // ---- bridge capabilities (from HELLO) ----
     bool hfield_mode_ = false; // bridge stands on our heightfield -> MuJoCo z is absolute

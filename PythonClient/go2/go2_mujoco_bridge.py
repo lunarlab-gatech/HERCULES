@@ -66,6 +66,7 @@ class LocoPolicy:
 
     def __init__(self, policy_dir, name="himloco"):
         import torch  # local import so the bridge starts fast when only pose mode is used
+        torch.set_num_threads(int(os.environ.get("GO2_TORCH_THREADS", "2")))  # a 270->12 MLP; more threads just spin
         self.torch = torch
         self.name = name
         cfg = POLICY_CONFIGS[name]
@@ -116,7 +117,7 @@ class Go2Sim:
     HF_ELEV = 6.0            # hfield elevation scale (m): data = (h - zmin) / HF_ELEV
 
     def __init__(self, menagerie=DEFAULT_MENAGERIE, policy_dir=DEFAULT_POLICY_DIR, terrain=True,
-                 grid_half=1.0, grid_cell=0.05, policy="himloco"):
+                 grid_half=1.5, grid_cell=0.10, policy="himloco"):
         import mujoco
         self.mujoco = mujoco
         self.terrain = terrain
@@ -289,6 +290,9 @@ class Go2Sim:
         n = grid.shape[0]
         if n != self.grid_n or abs(cell - self.grid_cell) > 1e-6:
             return
+        if not np.all(np.isfinite(grid)) or np.abs(grid).max() > 20.0 or abs(origin_x) > 1e4 or abs(origin_y) > 1e4:
+            self.bad_grids = getattr(self, "bad_grids", 0) + 1   # desynced / garbage packet: ignore
+            return
         zmin = float(grid.min()) - 0.02
         data = np.clip((grid - zmin) / self.HF_ELEV, 0.0, 1.0)
         self.model.hfield_data[:] = data.reshape(-1)
@@ -303,7 +307,7 @@ class Go2Sim:
 class Go2Bridge:
     """Runs the sim loop in a thread and talks to the Unreal pawn."""
 
-    def __init__(self, host="127.0.0.1", port=12345, pacing="wall", terrain=True, grid_half=1.0, grid_cell=0.05,
+    def __init__(self, host="127.0.0.1", port=12345, pacing="wall", terrain=True, grid_half=1.5, grid_cell=0.10,
                  policy="himloco", menagerie=DEFAULT_MENAGERIE, policy_dir=DEFAULT_POLICY_DIR, verbose=True,
                  connect_timeout=120.0):
         self.host, self.port, self.pacing, self.verbose = host, port, pacing, verbose
@@ -431,6 +435,12 @@ class Go2Bridge:
             if sim.time >= settle_until and sim.mode == "pose" and sim.policy and np.allclose(sim.pose_target, sim.stand_pose) and not getattr(self, "_policy_started", False):
                 self._policy_started = True
                 sim.set_velocity(0.0, 0.0, 0.0)
+            if os.environ.get("GO2_DEBUG") and sim.policy_steps % 25 == 0 and sim.mode == "policy":
+                x, y, z = sim.body_pose()[:3]
+                mp = sim.data.mocap_pos[sim.hf_mocap] if sim.hf_mocap >= 0 else None
+                self.log("dbg t=%.2f z=%.3f xy=(%.2f,%.2f) nc=%d mocap=%s q0=%s tgt0=%s" % (
+                    sim.time, z, x, y, sim.data.ncon, None if mp is None else np.round(mp, 3).tolist(),
+                    np.round(sim.joints()[:3], 2).tolist(), np.round(sim.q_target[:3], 2).tolist()))
             if self.verbose and time.time() - self.last_log > 5.0:
                 self.last_log = time.time()
                 x, y, z = sim.body_pose()[:3]
@@ -450,8 +460,10 @@ def main():
     ap.add_argument("--port", type=int, default=int(os.environ.get("GO2_PORT", "12345")))
     ap.add_argument("--pacing", choices=("wall", "sim"), default="wall")
     ap.add_argument("--no-terrain", action="store_true", help="flat MuJoCo floor; the pawn follows its own ground trace")
-    ap.add_argument("--grid-half", type=float, default=1.0)
-    ap.add_argument("--grid-cell", type=float, default=0.05)
+    # 10 cm cells: at 5 cm the hfield's multi-contact artifacts under the 2.2 cm foot spheres made the gait stumble
+    # or stall depending on where the feet landed on the lattice (offline sweep 2026-10-30); 10 cm is consistent.
+    ap.add_argument("--grid-half", type=float, default=1.5)
+    ap.add_argument("--grid-cell", type=float, default=0.10)
     ap.add_argument("--policy", choices=tuple(POLICY_CONFIGS), default=os.environ.get("GO2_POLICY", "himloco"))
     ap.add_argument("--vx", type=float, default=0.0)
     ap.add_argument("--vy", type=float, default=0.0)
