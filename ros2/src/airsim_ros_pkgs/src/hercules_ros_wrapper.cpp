@@ -62,6 +62,13 @@ AirsimROSWrapper::AirsimROSWrapper(const std::shared_ptr<rclcpp::Node> nh, const
             airsim_mode_ = AIRSIM_MODE::CAR;
             RCLCPP_INFO(nh_->get_logger(), "Setting ROS wrapper to CAR mode based on host_port 41452");
         }
+        else if (host_port_ == 41453)
+        {
+            // HERCULES Go2 dog (2026-10): ComputerVision vehicles (names Go2*) live on the Hero sim mode's third
+            // RPC server; odometry comes from getComputerVisionState, sensors from the usual base calls.
+            airsim_mode_ = AIRSIM_MODE::COMPUTERVISION;
+            RCLCPP_INFO(nh_->get_logger(), "Setting ROS wrapper to COMPUTERVISION mode based on host_port 41453");
+        }
     }
 
     tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(nh_);
@@ -211,6 +218,13 @@ void AirsimROSWrapper::create_ros_pubs_from_settings_json()
         else if (host_port_ == 41452) // ugv
         {
             if (curr_vehicle_name.rfind("Husky", 0) != 0)
+            {
+                continue;
+            }
+        }
+        else if (host_port_ == 41453) // computer-vision vehicles (Go2 dog)
+        {
+            if (curr_vehicle_name.rfind("Go2", 0) != 0)
             {
                 continue;
             }

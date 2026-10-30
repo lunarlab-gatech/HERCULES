@@ -12,11 +12,14 @@
 #include "Vehicles/Car/CarPawnSimApi.h"
 // #include "CarPawnSimApi.h"
 #include "MultirotorPawnSimApi.h"
+#include "Vehicles/ComputerVision/ComputerVisionPawnSimApi.h"
+#include "Vehicles/ComputerVision/ComputerVisionPawn.h"
 #include "physics/PhysicsBody.hpp"
 #include "common/ClockFactory.hpp"
 #include <memory>
 #include "vehicles/car/api/CarRpcLibServer.hpp"
 #include "vehicles/multirotor/api/MultirotorRpcLibServer.hpp"
+#include "vehicles/computervision/api/ComputerVisionRpcLibServer.hpp"
 #include "common/SteppableClock.hpp"
 
 void ASimModeWorldHero::BeginPlay()
@@ -101,6 +104,13 @@ std::vector<std::unique_ptr<msr::airlib::ApiServerBase>> ASimModeWorldHero::crea
     uint16_t port_car = 41452;
     api_servers.push_back(std::unique_ptr<msr::airlib::ApiServerBase>(new msr::airlib::CarRpcLibServer(
         getApiProvider(), getSettings().api_server_address, port_car)));
+
+    // HERCULES 2026-10 (Go2 dog): ComputerVision vehicles (externally posed pawns such as the Go2) get their own
+    // RPC server so clients/ROS can call getComputerVisionState; the base calls (images, lidar, IMU, poses) work
+    // on every port, type-specific calls only on their own.
+    uint16_t port_cv = 41453;
+    api_servers.push_back(std::unique_ptr<msr::airlib::ApiServerBase>(new msr::airlib::ComputerVisionRpcLibServer(
+        getApiProvider(), getSettings().api_server_address, port_cv)));
     return api_servers;
 #endif
 }
@@ -117,6 +127,15 @@ void ASimModeWorldHero::getExistingVehiclePawns(TArray<AActor *> &pawns) const
             APawn *vehicle_pawn = static_cast<APawn *>(fpawn);
             addPawnToMap(vehicle_pawn, AirSimSettings::kVehicleTypeSimpleFlight);
         }
+    }
+
+    TArray<AActor *> CVPawns;
+    UAirBlueprintLib::FindAllActor<TComputerVisionPawn>(this, CVPawns);
+    for (AActor *vpawn : CVPawns)
+    {
+        pawns.Add(vpawn);
+        if (getSettings().simmode_name == "Hero")
+            addPawnToMap(static_cast<APawn *>(vpawn), AirSimSettings::kVehicleTypeComputerVision);
     }
 
     TArray<AActor *> CarPawns;
@@ -137,7 +156,10 @@ bool ASimModeWorldHero::isVehicleTypeSupported(const std::string &vehicle_type) 
     return ((vehicle_type == AirSimSettings::kVehicleTypeSimpleFlight) ||
             (vehicle_type == AirSimSettings::kVehicleTypePhysXCar) ||
             (vehicle_type == AirSimSettings::kVehicleTypePX4) ||
-            (vehicle_type == AirSimSettings::kVehicleTypeArduCopterSolo));
+            (vehicle_type == AirSimSettings::kVehicleTypeArduCopterSolo) ||
+            // Go2 / camera-only vehicles (HERCULES 2026-10): ComputerVision pawns are posed by an
+            // external process (MuJoCo bridge) and carry normal AirSim cameras + sensors.
+            (vehicle_type == AirSimSettings::kVehicleTypeComputerVision));
 }
 std::string ASimModeWorldHero::getVehiclePawnPathName(const AirSimSettings::VehicleSetting &vehicle_setting) const
 {
@@ -148,6 +170,10 @@ std::string ASimModeWorldHero::getVehiclePawnPathName(const AirSimSettings::Vehi
         if (vehicle_setting.vehicle_type == AirSimSettings::kVehicleTypePhysXCar)
         {
             pawn_path = "DefaultCar";
+        }
+        else if (vehicle_setting.vehicle_type == AirSimSettings::kVehicleTypeComputerVision)
+        {
+            pawn_path = "DefaultComputerVision";
         }
         else
         {
@@ -163,6 +189,10 @@ PawnEvents *ASimModeWorldHero::getVehiclePawnEvents(APawn *pawn) const
     {
         return static_cast<TCarPawn *>(pawn)->getPawnEvents();
     }
+    else if (vehicle_type == AirSimSettings::kVehicleTypeComputerVision)
+    {
+        return static_cast<TComputerVisionPawn *>(pawn)->getPawnEvents();
+    }
     else
     {
         return static_cast<TFlyingPawn *>(pawn)->getPawnEvents();
@@ -176,6 +206,10 @@ const common_utils::UniqueValueMap<std::string, APIPCamera *> ASimModeWorldHero:
     {
         return (static_cast<const TCarPawn *>(pawn))->getCameras();
     }
+    else if (vehicle_type == AirSimSettings::kVehicleTypeComputerVision)
+    {
+        return (static_cast<const TComputerVisionPawn *>(pawn))->getCameras();
+    }
     else
     {
         return (static_cast<const TFlyingPawn *>(pawn))->getCameras();
@@ -187,6 +221,10 @@ void ASimModeWorldHero::initializeVehiclePawn(APawn *pawn)
     if (vehicle_type == AirSimSettings::kVehicleTypePhysXCar)
     {
         static_cast<TCarPawn *>(pawn)->initializeForBeginPlay(getSettings().engine_sound);
+    }
+    else if (vehicle_type == AirSimSettings::kVehicleTypeComputerVision)
+    {
+        static_cast<TComputerVisionPawn *>(pawn)->initializeForBeginPlay();
     }
     else
     {
@@ -204,6 +242,12 @@ std::unique_ptr<PawnSimApi> ASimModeWorldHero::createVehicleSimApi(
         auto vehicle_sim_api = std::unique_ptr<PawnSimApi>(new CarPawnSimApi(pawn_sim_api_params, vehicle_pawn->getKeyBoardControls()));
         vehicle_sim_api->initialize();
         // vehicle_sim_api->reset();
+        return vehicle_sim_api;
+    }
+    else if (vehicle_type == AirSimSettings::kVehicleTypeComputerVision)
+    {
+        auto vehicle_sim_api = std::unique_ptr<PawnSimApi>(new ComputerVisionPawnSimApi(pawn_sim_api_params));
+        vehicle_sim_api->initialize();
         return vehicle_sim_api;
     }
     else
@@ -224,6 +268,11 @@ msr::airlib::VehicleApiBase *ASimModeWorldHero::getVehicleApi(const PawnSimApi::
     {
         const auto car_sim_api = static_cast<const CarPawnSimApi *>(sim_api);
         return car_sim_api->getVehicleApi();
+    }
+    else if (vehicle_type == AirSimSettings::kVehicleTypeComputerVision)
+    {
+        const auto cv_sim_api = static_cast<const ComputerVisionPawnSimApi *>(sim_api);
+        return cv_sim_api->getVehicleApi();
     }
     else
     {
