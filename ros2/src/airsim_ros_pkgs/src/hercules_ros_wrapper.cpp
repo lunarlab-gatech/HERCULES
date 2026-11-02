@@ -64,7 +64,7 @@ AirsimROSWrapper::AirsimROSWrapper(const std::shared_ptr<rclcpp::Node> nh, const
         }
         else if (host_port_ == 41453)
         {
-            // HERCULES Go2 dog (2026-10): ComputerVision vehicles (names Go2*) live on the Hero sim mode's third
+            // HERCULES Go2 dog / G1 humanoid (2026-10): ComputerVision vehicles live on the Hero sim mode's third
             // RPC server; odometry comes from getComputerVisionState, sensors from the usual base calls.
             airsim_mode_ = AIRSIM_MODE::COMPUTERVISION;
             RCLCPP_INFO(nh_->get_logger(), "Setting ROS wrapper to COMPUTERVISION mode based on host_port 41453");
@@ -222,9 +222,9 @@ void AirsimROSWrapper::create_ros_pubs_from_settings_json()
                 continue;
             }
         }
-        else if (host_port_ == 41453) // computer-vision vehicles (Go2 dog)
+        else if (host_port_ == 41453) // computer-vision vehicles (MuJoCo-posed robots: Go2 dog, G1 humanoid)
         {
-            if (curr_vehicle_name.rfind("Go2", 0) != 0)
+            if (vehicle_setting->vehicle_type != AirSimSettings::kVehicleTypeComputerVision)
             {
                 continue;
             }
