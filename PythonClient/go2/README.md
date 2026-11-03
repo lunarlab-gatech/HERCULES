@@ -31,6 +31,10 @@ Python client and the ROS 2 bridge treat them like any other HERCULES vehicle.
 | `tools/ue_import_meshes.py` | editor-side import of the OBJs into `/AirSim/G1/Meshes` + Unitree's dark/light materials |
 | `tools/ue_photo_shoot.py` | editor-side (PIE) photo helper: free camera around a robot (azimuth / distance / height / FOV), 1080p HighResShot; group shots |
 | `tools/photo_driver.py` | runs both bridges and executes per-robot command files (`vel`, `forward`, `heading`, `sit`, ...) for photo / demo sessions |
+| `tools/ue_cine_rig.py` | editor-side (PIE) lockstep camera rig: Slate pre-tick callback that holds the game paused, applies a camera pose, runs exactly one world tick (`t.OverrideFPS`) and takes a 1080p HighResShot per request (JSON files) |
+| `tools/rigclient.py` | client for the rig (request / ack / status files) |
+| `tools/cine_walk.py` | frame-exact "walking together" capture: both bridges (`--pacing frames`), path-following formation controller (lanes, along-track sync, lane swap), shot timeline with a framing guard, all onboard sensors per frame |
+| `tools/cine_compose.py` | composes the cinematic frames with both robots' RGB / depth / segmentation / LiDAR / IMU / odometry panels and encodes the video (title + end cards) |
 | `~/Documents/AirSim/settings_go2.json` | example settings: Hero mode, vehicles `Go2` + `G1` (ComputerVision, PawnPaths `Go2` / `G1`) + Husky1 |
 
 Unreal side: `Unreal/Plugins/AirSim/Source/Vehicles/Mujoco/MujocoPawn.{h,cpp}` (socket, anchoring, terrain feedback,

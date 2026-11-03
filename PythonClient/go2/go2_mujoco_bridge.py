@@ -17,6 +17,9 @@ HERCULES extensions (negotiated by a HELLO packet, ignored by older receivers):
     the bridge feeds it to a MuJoCo hfield so the robot really stands on / bumps into the Unreal terrain;
   * lockstep: with --pacing sim the bridge advances MuJoCo to the Unreal sim time it receives, so pausing
     the simulator (AirSim simPause / lockstep nodes) pauses the robot too. --pacing wall = real time.
+    --pacing frames --frame-dt 0.04 advances exactly frame_dt of MuJoCo time per feedback packet (the pawn sends
+    one per world tick when no terrain grid is requested) -- for frame-exact video capture with t.OverrideFPS,
+    immune to the float32 time stamp in the feedback header (8 ms granularity after a day of editor uptime).
 
 Usage:
   python3 go2_mujoco_bridge.py [--robot go2|g1] [--port 12345] [--pacing wall|sim] [--no-terrain] [--vx 0.5 ...]
@@ -500,6 +503,7 @@ class MujocoBridge:
                  policy=None, robot="go2", verbose=True, connect_timeout=120.0, **_legacy):
         self.spec = ROBOTS[robot] if isinstance(robot, str) else robot
         self.host, self.port, self.pacing, self.verbose = host, int(port or self.spec.port), pacing, verbose
+        self.frame_dt = float(os.environ.get('GO2_FRAME_DT', '0.04'))
         self.connect_timeout = connect_timeout
         self.sim = RobotSim(self.spec, terrain, grid_half, grid_cell, policy)
         self.sock = None
@@ -664,16 +668,18 @@ class MujocoBridge:
             self.pump_feedback()
             if self.pacing == "sim" and self.sim_t0 is not None:
                 target = self.sim_time - self.sim_t0
+            elif self.pacing == "frames":
+                target = self.feedback * self.frame_dt
             else:
                 target = time.time() - wall_t0
-            if sim.time + step > target:
+            if sim.time + step > target + 1e-6:
                 time.sleep(0.002)
                 # grid/feedback may still arrive while we wait; wall-clock drift guard
                 if self.pacing != "sim" and target - sim.time < -0.5:
                     wall_t0 = time.time() - sim.time
                 continue
             # catch up at most 0.25 s per iteration; beyond that re-anchor (never free-wheel)
-            if target - sim.time > 0.25:
+            if target - sim.time > 0.25 and self.pacing != "frames":
                 if self.pacing == "sim":
                     self.sim_t0 = self.sim_time - sim.time - 0.25
                 else:
@@ -716,7 +722,8 @@ def main():
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=int(os.environ["GO2_PORT"]) if os.environ.get("GO2_PORT") else None,
                     help="pawn port (default: 12345 for go2, 12346 for g1)")
-    ap.add_argument("--pacing", choices=("wall", "sim"), default="wall")
+    ap.add_argument("--pacing", choices=("wall", "sim", "frames"), default="wall")
+    ap.add_argument("--frame-dt", type=float, default=0.04, help="MuJoCo seconds per feedback packet with --pacing frames")
     ap.add_argument("--no-terrain", action="store_true", help="flat MuJoCo floor; the pawn follows its own ground trace")
     # 10 cm cells: at 5 cm the hfield's multi-contact artifacts under the 2.2 cm foot spheres made the gait stumble
     # or stall depending on where the feet landed on the lattice (offline sweep 2026-10-30); 10 cm is consistent.
@@ -729,6 +736,7 @@ def main():
     ap.add_argument("--script", default="", help="semicolon list: forward:2.0;turn:90;sit;stand;wait:3 (needs go2_commander)")
     ap.add_argument("--duration", type=float, default=0.0, help="stop after this many wall seconds (0 = run forever)")
     a = ap.parse_args()
+    os.environ["GO2_FRAME_DT"] = str(a.frame_dt)
     br = MujocoBridge(a.host, a.port, a.pacing, not a.no_terrain, a.grid_half, a.grid_cell, policy=a.policy, robot=a.robot).start()
     try:
         if a.script:
