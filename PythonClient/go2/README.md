@@ -29,6 +29,8 @@ Python client and the ROS 2 bridge treat them like any other HERCULES vehicle.
 | `mujoco_scene_hfield.xml` | MuJoCo scene template: robot include + heightfield + plane on mocap bodies (+ IMU sensors for the Go2) |
 | `tools/g1_meshes_to_obj.py` | Unitree G1 STL link meshes -> cm OBJ (decimated to 4 k tris) for the Unreal importer |
 | `tools/ue_import_meshes.py` | editor-side import of the OBJs into `/AirSim/G1/Meshes` + Unitree's dark/light materials |
+| `tools/ue_photo_shoot.py` | editor-side (PIE) photo helper: free camera around a robot (azimuth / distance / height / FOV), 1080p HighResShot; group shots |
+| `tools/photo_driver.py` | runs both bridges and executes per-robot command files (`vel`, `forward`, `heading`, `sit`, ...) for photo / demo sessions |
 | `~/Documents/AirSim/settings_go2.json` | example settings: Hero mode, vehicles `Go2` + `G1` (ComputerVision, PawnPaths `Go2` / `G1`) + Husky1 |
 
 Unreal side: `Unreal/Plugins/AirSim/Source/Vehicles/Mujoco/MujocoPawn.{h,cpp}` (socket, anchoring, terrain feedback,
