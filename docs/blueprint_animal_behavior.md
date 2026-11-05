@@ -1,58 +1,76 @@
 # Animal Behavior Blueprint
 
-The **Animal Behavior** Blueprint is a custom, parameterized Unreal Engine Blueprint (AnimalAI) that populates a world with wildlife — kangaroos, deer, and other animals — that roam and react at runtime. This page covers how to download it and use it in your own Unreal project.
+The **Animal Behavior** package (AnimalAI) is the set of HERCULES-authored Unreal Engine Blueprints that put wandering wildlife — kangaroos and deer — into the natural HERCULES worlds. Each animal is a `Character` driven by Unreal's navigation system: it picks a random reachable point around itself, walks there, pauses, and repeats, so robots see moving warm bodies without any scripting on your side.
 
 ![Kangaroo wildlife roaming the outback](media/auskangaroo1.gif)
 
 ## Download
 
-!!! note "Package being finalized"
-    The Animal Behavior Blueprint will be published as a Blueprint package on the [HERCULES releases page](https://github.com/lunarlab-gatech/HERCULES/releases). Until the zip lands, this page already documents the requirements, install procedure, and sensor integration.
-<!-- TODO: replace with the actual release asset link once published -->
+[:material-download: HERCULES_AnimalBehavior_Blueprints_v1.0.zip](https://github.com/lunarlab-gatech/HERCULES/releases){ .md-button .md-button--primary }
 
-The package contains the HERCULES-authored behavior Blueprints (spawner, AnimalAI logic, animation Blueprints where self-made) only. The animal meshes, skeletons, and animation packs are third-party marketplace content — **linked, not shipped** — see [Using Blueprint Packages](blueprint_packages.md).
+The zip is attached to the [HERCULES releases page](https://github.com/lunarlab-gatech/HERCULES/releases). It contains **only the HERCULES Blueprints** (plus `README.md`, `MANIFEST.json` and the MIT `LICENSE`); the animal meshes, skeletons and animations are third-party Fab content that is **linked, not shipped** — see [Using Blueprint Packages](blueprint_packages.md).
+
+| Blueprint | Parent | Mesh / AnimBP it expects | Walk speed |
+|---|---|---|---|
+| `BP_Animal` | `Character` | `SK_DeerStag` + `ABP_DeerStag` (Animal Variety Pack) | 150 cm/s |
+| `BP_DeerStag` | `BP_Animal` | `SK_DeerStag` + `ABP_DeerStag` | 120 cm/s |
+| `BP_DeerDoe`, `BP_DeerDoe1` | `BP_Animal` | `SK_DeerDoe` + `ABP_DeerDoe` | 120 cm/s |
+| `BP_Kangaroo` | `Character` (same logic as `BP_Animal`, own copy) | `SM_kangaroo` (skeletal mesh) + `ABP_Kangaroo` (Kangaroo Animated) | 300 cm/s |
 
 ## Requirements
 
 | Requirement | Notes |
 |---|---|
-| Unreal Engine 5.2.1 | Version HERCULES is built against |
-| HERCULES AirSim plugin | For sensing integration ([install](install_precompiled.md)) |
-| Animal asset pack(s) | Per species — e.g. the [Animal Variety Pack](https://www.fab.com/search?q=animal%20variety%20pack) (deer) and a kangaroo model pack are used in the HERCULES AustraliaLandscape world. Assign the skeletal mesh / AnimBP per species via the Blueprint's exposed slots. |
-| NavMesh in your level | Animals navigate with Unreal's navigation system — add a `NavMeshBoundsVolume` covering the roam area |
-
-<!-- TODO: confirm final third-party asset list + expected content paths when the package is cut -->
+| Unreal Engine 5.2.1 | Version HERCULES is built against (engine modules `AIModule` and `NavigationSystem` are always available; no extra plugin) |
+| HERCULES AirSim plugin | Only needed to see the animals in the robots' sensor streams ([install](install_precompiled.md)) |
+| [Animal Variety Pack](https://www.fab.com/listings/2dd7964c-a601-4264-a53d-465dcae1644c) (PROTOFACTOR, **free**) | Deer stag + doe. Expected at `/Game/AnimalVarietyPack/DeerStagAndDoe/` (the default *Add to project* location) |
+| [Kangaroo Animated](https://www.fab.com/listings/876c0654-dadc-47a6-ac14-fb58eac3cccf) (low-poly kangaroo, 11 animations) | Expected at `/Game/Kangaroo/` with `Meshes/SM_kangaroo` and `Animations/ABP_Kangaroo`. The listing was identified from the asset names the Blueprint references (`SK_kangaroo`, `Anim_kangaroo_idle/walk/run/boxing/kick/doublekick/eat/die/hit`) — confirm it against your Fab library before buying |
+| NavMesh in your level | Add a `NavMeshBoundsVolume` covering the roam area (a `RecastNavMesh` actor is created automatically). The Australia level uses ten of them. |
 
 ## Install into your Unreal project
 
-Follow the general steps in [Using Blueprint Packages](blueprint_packages.md#installing-a-package):
+1. Unzip the package and copy its `Content` folder onto your project root, so the Blueprints land in `<Project>/Content/HERCULES/Agents/Animals/`.
+2. Add the Animal Variety Pack and the kangaroo pack to the same project from Fab / the Epic Games Launcher. Keep their default folder names (`AnimalVarietyPack`, `Kangaroo`); the Blueprints reference the meshes by content path.
+3. Open the project. If a pack is missing you get one *Failed to load* warning per missing asset and that species shows an empty mesh — everything else still works.
+4. Make sure the level has a NavMesh (press `P` in the viewport to visualise it).
 
-1. Download and unzip the Blueprint package, and copy the contained folder into your project's `Content/`.
-2. Install the animal asset pack(s) for the species you want from their store links.
-3. Restart the Unreal Editor, open the species Blueprints, and assign the skeletal mesh and animation Blueprint slots.
-4. Make sure your level has a NavMesh covering the intended roam area.
+## How it works
+
+`BP_Animal` is a `Character` with `AIControllerClass = DetourCrowdAIController` and *Auto Possess AI = Placed in World*. Its Event Graph runs one loop from `BeginPlay`:
+
+```
+GetRandomReachablePointInRadius (origin = own location, radius)
+  -> AI MoveTo (acceptance radius)        # DetourCrowd steers around other agents
+  -> on Completed / Aborted -> Delay -> loop
+```
+
+The deer species are children that only change the mesh, animation Blueprint and walk speed; the does add a `Yaw Speed` variable (default 0) that applies a constant turn every tick on top of the navigation. `BP_Kangaroo` is a standalone copy of the same loop on the kangaroo mesh with `BlockAll` collision.
 
 ## Usage
 
-1. Place the animal spawner / behavior Blueprint into your level.
-2. Choose the species and configure herd size, roam area, and behavior.
-3. Play / run the simulation — the animals move through the world and are observable by all robots' sensors.
+1. Drag `BP_Kangaroo`, `BP_DeerStag`, `BP_DeerDoe` or `BP_DeerDoe1` into the level, as many as you want — there is no spawner: herd size is the number of actors you place (the HERCULES Australia world ships two kangaroos, the Spruce Forest test level two stags, four does and two `BP_Animal`).
+2. Keep the actors inside the NavMesh, otherwise `GetRandomReachablePointInRadius` finds nothing and the animal stands still.
+3. Play / run the simulation — the animals start wandering immediately and are observable by every robot's sensors.
 
-## Parameters
+### Parameters
 
-<!-- TODO: fill in the real exposed parameters from the packaged Blueprint -->
-| Parameter | Description | Default |
-|---|---|---|
-| Species | Which animal(s) to spawn | — |
-| Count / density | How many animals | — |
-| Roam area | Region the animals wander | — |
+| Parameter | Where | Default | Description |
+|---|---|---|---|
+| `Max Walk Speed` | CharacterMovement component (per instance or per Blueprint) | 150 / 120 / 300 cm/s | Walking speed |
+| `Yaw Speed` | `BP_DeerDoe`, `BP_DeerDoe1` (instance-editable) | 0 deg/s | Extra constant turning while walking |
+| Wander radius, acceptance radius, pause | Literals on the `GetRandomReachablePointInRadius`, `AI MoveTo` and `Delay` nodes in the Event Graph | — | Open `BP_Animal` / `BP_Kangaroo` and edit the pin values (or promote them to variables) |
+| Roam area | `NavMeshBoundsVolume`(s) in the level | — | Animals never leave the NavMesh |
+
+### Adding a species
+
+Duplicate `BP_DeerStag`, set the *Mesh* component's skeletal mesh and *Anim Class* to your animal's assets, and adjust `Max Walk Speed`. Nothing else is needed; the wander loop is inherited from `BP_Animal`.
 
 ## Sensor integration
 
 Animals are the flagship targets for the [synthetic thermal camera](synthetic_cameras.md):
 
-* Spawned animals must be registered with [instance segmentation](instance_segmentation.md) (`AddNewActorToSegmentation` on spawn — see [Using Blueprint Packages](blueprint_packages.md#making-blueprints-visible-to-the-hercules-sensors)); only skeletal/static meshes are supported.
-* **Mesh naming matters**: names containing `kangaroo`, `deer`, or `animal` are classified as warm bodies (315 K, brightness-floored) by the [LWIR camera](lwir_camera.md); kangaroos additionally get the orange highlight recolor. Name your spawned instances accordingly (e.g. `BP_Kangaroo23`).
+* **No registration call is needed.** Editor-placed actors are added to [instance segmentation](instance_segmentation.md) automatically when the simulation starts; only actors you spawn yourself at runtime need `AddNewActorToInstanceSegmentation` — see [Using Blueprint Packages](blueprint_packages.md#making-blueprints-visible-to-the-hercules-sensors).
+* **Classification is by name, case-insensitive.** The [LWIR camera](lwir_camera.md) looks for `kangaroo`, `deer` or `animal` in the segmentation name, which for a single-mesh actor is the actor's own name (`BP_Kangaroo_C_...`, `BP_DeerStag_...`). The default names therefore classify as warm bodies (315 K, brightness-floored) out of the box, and kangaroos get the orange highlight recolor. Keep those words in the name if you rename actors.
 * Other species need only an override — no renaming:
 
 ```json
@@ -60,5 +78,7 @@ Animals are the flagship targets for the [synthetic thermal camera](synthetic_ca
   "ThermalIR": { "Overrides": [ { "Match": "elephant", "TempK": 309.0, "Emissivity": 0.98, "IsAnimal": true } ] }
 }
 ```
+
+* For [object detection](object_detection.md) labels, add a detection filter on the camera, e.g. `simAddDetectionFilterMeshName(camera, ImageType.Scene, "BP_Kangaroo*")`; the 2-D/3-D boxes then follow the moving animals.
 
 See the [Dynamic Environmental Phenomena](dynamic_phenomena.md) overview and the [Environments](index.md#environments) for these agents in context.

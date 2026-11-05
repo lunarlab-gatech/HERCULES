@@ -420,3 +420,9 @@ ros2/src/VINS-MONO-ROS2
 
 *.csv
 PythonClient/segmentation/*.csv
+
+# CodeGraph generated local index (do not commit)
+.codegraph/
+
+# nested git repo (HERCULES semantic-mapping overlay, its own remote)
+ros2/src/HERCULES-ROS2-Mapping/

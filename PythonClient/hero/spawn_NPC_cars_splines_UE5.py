@@ -3,7 +3,10 @@ import random
 import math
 
 # ─── CONFIG ─────────────────────────────────────────────────────────────────────
-VEHICLE_FOLDER       = "/Game/CustomHumanPedestrians"
+# Folder holding the BP_VehicleAI* classes: the released Vehicle Behavior package installs them under
+# /Game/HERCULES/Agents/Vehicles; the original HERCULES city project kept them in /Game/CustomHumanPedestrians.
+VEHICLE_FOLDER       = next((f for f in ("/Game/HERCULES/Agents/Vehicles", "/Game/CustomHumanPedestrians")
+                             if unreal.EditorAssetLibrary.does_directory_exist(f)), "/Game/HERCULES/Agents/Vehicles")
 SPLINE_KEYWORD       = "SplineRoad"
 INSTANCES_PER_SPLINE = 10
 MIN_SPAWN_DISTANCE   = 500.0   # cm

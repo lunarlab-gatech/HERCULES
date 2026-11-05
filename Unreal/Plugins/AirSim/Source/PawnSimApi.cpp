@@ -539,6 +539,108 @@ void PawnSimApi::updateKinematics(float dt)
 {
 	//update kinematics from pawn's movement instead of physics engine
 
+    // CRASH GUARD: under heavy multi-vehicle lockstep runs the pawn can be transiently
+    // invalid (mid-GC/teardown/physics glitch); dereferencing it here crashed the editor
+    // (GetVelocity on a dangling pawn -> game thread dies -> simContinueForTime hangs ->
+    // the whole external pipeline stalls out). Skip this tick's update instead: the
+    // previous kinematic state persists for one tick, which is harmless.
+	APawn* pawn_check = getPawn();
+	if (!IsValid(pawn_check) || !IsValid(pawn_check->GetRootComponent())) {
+		return;
+	}
+
+	// FALL GUARD: a terrain punch-through sends the vehicle into free fall below the
+	// world. RPC-level rescue teleports cannot arrest a falling Chaos vehicle (the
+	// solver re-applies its own state) and at KillZ the pawn is destroyed, hanging
+	// image capture and the whole lockstep pipeline. Acting here on the game thread
+	// during the simulation window lets us teleport AND zero the physics velocity
+	// directly, which does stick.
+	//
+	// The capture must be GROUND-VERIFIED: a wedged vehicle can sink through geometry
+	// at low vertical speed, so a plain low-|vz| check happily records subterranean
+	// poses and the rescue then loops forever teleporting the pawn back under the
+	// terrain (observed live: 22k fires, robot zombie for 390 sim-s). A downward
+	// line trace confirms an actual surface under the wheels before capturing, the
+	// rescue drops the pawn from 1.5 m above the captured pose, and if it still
+	// fails to recover it escalates to the spawn pose, which is always valid.
+	{
+		UPrimitiveComponent* root_prim = Cast<UPrimitiveComponent>(pawn_check->GetRootComponent());
+		const FVector cur_loc = pawn_check->GetActorLocation();
+		// NaN GUARD: a wedge-induced Chaos blowup can NaN-poison the pawn transform
+		// WITHOUT a fall (observed live: pose bit-frozen, cameras dead, controls no-op,
+		// zero fall-guard fires because NaN comparisons are all false). Teleporting to a
+		// clean transform with zeroed velocity is also how a NaN'd Chaos body recovers.
+		if (cur_loc.ContainsNaN()) {
+			pawn_check->SetActorLocationAndRotation(
+				state_.start_location + FVector(0, 0, 150),
+				state_.start_rotation.Quaternion(),
+				false, nullptr, ETeleportType::TeleportPhysics);
+			if (root_prim && root_prim->IsSimulatingPhysics()) {
+				root_prim->SetPhysicsLinearVelocity(FVector::ZeroVector);
+				root_prim->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+			}
+			UE_LOG(LogTemp, Error, TEXT("AirSim fall-guard NAN RECOVERY: %s transform was NaN -> spawn pose"),
+			       *pawn_check->GetName());
+			return;
+		}
+		const float z_ned_m = ned_transform_.toLocalNed(cur_loc).z();
+		if (z_ned_m > 10.0f) {
+			state_.fall_guard_fires++;
+			// 30 m under is never locally recoverable -- bogus captures must not be able
+			// to keep resetting the counter and defer escalation forever (observed live:
+			// 15k fires with the counter pinned below the threshold)
+			if (z_ned_m > 30.0f || state_.fall_guard_fires > 100 || !state_.fall_guard_has_pose) {
+				// escalation: repeated rescues did not recover -- go back to spawn
+				pawn_check->SetActorLocationAndRotation(
+					state_.start_location + FVector(0, 0, 150),
+					state_.start_rotation.Quaternion(),
+					false, nullptr, ETeleportType::TeleportPhysics);
+				if (root_prim && root_prim->IsSimulatingPhysics()) {
+					root_prim->SetPhysicsLinearVelocity(FVector::ZeroVector);
+					root_prim->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+				}
+				UE_LOG(LogTemp, Error, TEXT("AirSim fall-guard ESCALATION: %s unrecoverable below world (z_ned=%.1fm, %d fires) -> spawn pose"),
+				       *pawn_check->GetName(), z_ned_m, state_.fall_guard_fires);
+				state_.fall_guard_fires = 0;
+			}
+			else {
+				pawn_check->SetActorLocationAndRotation(
+					state_.fall_guard_location + FVector(0, 0, 150),   // drop from above
+					state_.fall_guard_rotation,
+					false, nullptr, ETeleportType::TeleportPhysics);
+				if (root_prim && root_prim->IsSimulatingPhysics()) {
+					root_prim->SetPhysicsLinearVelocity(FVector::ZeroVector);
+					root_prim->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+				}
+				UE_LOG(LogTemp, Warning, TEXT("AirSim fall-guard: %s below world (z_ned=%.1fm) -> dropped above last grounded pose (fire %d)"),
+				       *pawn_check->GetName(), z_ned_m, state_.fall_guard_fires);
+			}
+		}
+		else if (z_ned_m < 5.0f) {
+			const FVector vel_chk = (root_prim && root_prim->IsSimulatingPhysics())
+				? root_prim->GetPhysicsLinearVelocity()
+				: pawn_check->GetVelocity();
+			if (FMath::Abs(vel_chk.Z) < 100.0f) {   // cm/s: not falling...
+				// ...and verifiably ON TOP of the world: a plain "surface below" trace is
+				// fooled by geometry layered beneath the landscape (observed live -- a
+				// subterranean robot kept 'capturing' and the rescue looped forever).
+				// Trace down from 50 m ABOVE the robot's x,y: the first hit is the true
+				// top surface; only capture if the robot is within 1.5 m of it.
+				FHitResult hit;
+				FCollisionQueryParams qp(SCENE_QUERY_STAT(AirSimFallGuard), false, pawn_check);
+				const FVector sky(cur_loc.X, cur_loc.Y, cur_loc.Z + 5000.0f);
+				const bool hit_top = pawn_check->GetWorld()->LineTraceSingleByChannel(
+					hit, sky, cur_loc - FVector(0, 0, 150), ECC_WorldStatic, qp);
+				if (hit_top && FMath::Abs(hit.ImpactPoint.Z - cur_loc.Z) < 150.0f) {
+					state_.fall_guard_location = cur_loc;
+					state_.fall_guard_rotation = pawn_check->GetActorQuat();
+					state_.fall_guard_has_pose = true;
+					state_.fall_guard_fires = 0;
+				}
+			}
+		}
+	}
+
 	auto next_kinematics = kinematics_->getState();
 
     next_kinematics.pose = getPose();

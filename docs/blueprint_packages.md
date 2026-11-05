@@ -5,9 +5,9 @@ The [dynamic phenomena](dynamic_phenomena.md) and dynamic-agent Blueprints are d
 ## What is (and is not) in a package
 
 * **Included** — everything authored by the HERCULES team: the Blueprint classes, animation Blueprints, behavior logic, and self-made support assets. These are redistributable and covered by the repository license.
-* **Not included** — third-party marketplace/Fab assets (meshes, skeletons, animation packs, VFX, MetaHumans). Marketplace licenses allow *using* these in a project but not *redistributing* them, so each Blueprint page lists the required packs with links; you install them into your project yourself (most are free).
+* **Not included** — third-party marketplace/Fab assets (meshes, skeletons, animation packs, VFX, character packs). Marketplace licenses allow *using* these in a project but not *redistributing* them, so each Blueprint page lists the required packs with links; you install them into your project yourself (most are free).
 
-Blueprints reference third-party assets through **instance-editable asset slots** (soft references) wherever possible, so a package loads cleanly even before the third-party content is installed — you then assign the assets in the Details panel or install them at the documented content path.
+The agent Blueprints reference their third-party meshes and animations by **content path** (hard references on the mesh component of each variant). The package therefore loads before the packs are installed, but with empty meshes and a *Failed to load* warning per missing asset; once the packs sit at the documented `/Game/<Pack>/...` paths everything resolves without any reassignment. Every package ships a `MANIFEST.json` listing, per Blueprint, exactly which third-party asset paths it expects.
 
 ## Installing a package
 
@@ -26,7 +26,7 @@ Blueprints reference third-party assets through **instance-editable asset slots*
 Dynamic actors interact with the HERCULES ground-truth and synthetic sensors through the [instance segmentation](instance_segmentation.md) system:
 
 * **Editor-placed actors** are registered automatically at simulation start (static and skeletal meshes only — see the [limitations](instance_segmentation.md#limitations)).
-* **Runtime-spawned actors** (which is what most dynamic phenomena/agent Blueprints do) must be registered explicitly: call `ASimModeBase::AddNewActorToSegmentation(AActor)` from the Blueprint/C++ after spawning, or via RPC call `simAddSegmentationActor` followed by `simSetSegmentationObjectID`. The HERCULES phenomenon Blueprints do this for you where applicable.
+* **Runtime-spawned actors** (which is what most dynamic phenomena/agent Blueprints do) must be registered explicitly: call `ASimModeBase::AddNewActorToInstanceSegmentation(Actor, UpdateAnnotation)` (BlueprintCallable on the SimMode actor; `DeleteActorFromInstanceSegmentation` and `ForceUpdateInstanceSegmentation` are its companions) from the Blueprint/C++ after spawning, or over RPC call `simAddSegmentationActor` followed by `simSetSegmentationObjectID`. The HERCULES dynamic-agent Blueprints are editor-placed, so they need none of this; the wildfire placement scripts spawn their fire actors before the simulation starts for the same reason.
 
 Registration also drives the [synthetic thermal and night-vision cameras](synthetic_cameras.md): the [LWIR ThermalIR camera](lwir_camera.md) classifies every registered mesh by **name keywords** (`fire`, `kangaroo`, `animal`, `person`, `car`, ...) to assign temperature and emissivity. Two consequences for Blueprint authors and users:
 
@@ -45,6 +45,17 @@ Registration also drives the [synthetic thermal and night-vision cameras](synthe
 ```
 
 See the [synthetic cameras page](synthetic_cameras.md) for the full keyword table, settings reference, and troubleshooting ("object not showing up").
+
+## How the HERCULES agent packages are built
+
+The three dynamic-agent packages ([animals](blueprint_animal_behavior.md), [pedestrians](blueprint_pedestrian_behavior.md), [vehicles](blueprint_vehicle_behavior.md)) are produced by `PythonClient/hero/package_agent_blueprints_UE5.py`, run headless against a throwaway Blueprint-only project that contains the source Blueprints plus the third-party packs:
+
+```bash
+UnrealEditor-Cmd <PackagingProject>.uproject -run=pythonscript \
+    -script=PythonClient/hero/package_agent_blueprints_UE5.py -unattended -nopause -nosplash -NullRHI
+```
+
+With `HPKG_MODE=package` it renames every Blueprint into `/Game/HERCULES/Agents/{Animals,Pedestrians,Vehicles}` (base classes first), force-saves them so their import tables carry the final paths, deletes the redirectors left behind, and runs a byte-level scan of every saved asset for the old paths. With `HPKG_MODE=verify` it loads and compiles each Blueprint, classifies every dependency as HERCULES / engine / third-party pack and writes the manifest (`HPKG_OUT`) that becomes each zip's `MANIFEST.json`. The zips are then built from that folder only, and loaded once more in a clean project **without** any pack to check the documented behaviour (empty meshes and one *Failed to load* warning per missing asset; `BP_VehicleAI` additionally reports a compile error until City Sample Vehicles provides its parent class).
 
 ## Authoring and sharing your own Blueprint package
 

@@ -4,6 +4,7 @@
 
 #include "Vehicles/Car/CarPawn.h"
 #include "FlyingPawn.h"
+#include "Vehicles/ComputerVision/ComputerVisionPawn.h"
 #include "common/Common.hpp"
 #include "SimMode/SimModeWorldBase.h"
 #include "api/ApiServerBase.hpp"
@@ -36,4 +37,5 @@ protected: // overrides
 private:
     typedef ACarPawn TCarPawn;
     typedef AFlyingPawn TFlyingPawn;
+    typedef AComputerVisionPawn TComputerVisionPawn;
 };

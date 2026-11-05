@@ -1,0 +1,24 @@
+<!-- MuJoCo scene for the HERCULES bridge: the robot model (ROBOT_XML, substituted at runtime: menagerie go2.xml or
+     Unitree's g1_12dof.xml) + a heightfield that the Unreal side fills in. The generated file is written next to the
+     robot xml so its relative mesh paths resolve. -->
+<mujoco model="hercules scene">
+  <include file="ROBOT_XML"/>
+  <option timestep="0.002"/>
+  <asset>
+    <hfield name="terrain" nrow="HF_N" ncol="HF_N" size="HF_HALF HF_HALF HF_ELEV 0.5"/>
+  </asset>
+  <worldbody>
+    <light pos="0 0 3" dir="0 0 -1" directional="true"/>
+    <!-- hybrid contact model: the plane always carries the flat ground of the window (clean foot contacts, the
+         configuration the policies are reliable on); the hfield carries only cells that rise more than FLAT_RELIEF
+         above the plane (ramps, steps, obstacle tops), everywhere else it sits 5 cm below the plane. Both on mocap
+         bodies so they can be moved at runtime (a world geom's pos cannot be moved: MuJoCo keeps the compiled xpos). -->
+    <body name="floor_body" mocap="true" pos="0 0 0">
+      <geom name="floor" type="plane" size="0 0 0.05" friction="0.8 0.02 0.01" priority="1" condim="3" rgba="0.3 0.3 0.3 1"/>
+    </body>
+    <body name="terrain_body" mocap="true" pos="0 0 0">
+      <geom name="terrain" type="hfield" hfield="terrain" friction="0.8 0.02 0.01" priority="1" condim="3"/>
+    </body>
+  </worldbody>
+  <!-- SENSORS -->
+</mujoco>

@@ -137,6 +137,7 @@ ament_target_dependencies(hercules_synced_node
   geometry_msgs
   nav_msgs
   sensor_msgs
+  std_msgs
   rosgraph_msgs
 )
 # _______________________________

@@ -34,11 +34,11 @@ Each phenomenon is packaged as a downloadable, parameterized Unreal **Blueprint*
 
 ## Dynamic agents
 
-Dynamic-agent Blueprints populate the world with moving entities that update the shared state at runtime — each is a downloadable, parameterized Blueprint:
+Dynamic-agent Blueprints populate the world with moving entities that update the shared state at runtime — each family is a downloadable Blueprint package (HERCULES-authored Blueprints only; the meshes come from the linked free/paid packs):
 
-- **[Animal behavior](blueprint_animal_behavior.md)** (AnimalAI) — kangaroos, deer, and other wildlife in the natural worlds.
-- **[Pedestrian behavior](blueprint_pedestrian_behavior.md)** (MetaHuman) — realistic walking agents.
-- **[Vehicle behavior](blueprint_vehicle_behavior.md)** (VehicleAI) — autonomous vehicle traffic in the city world.
+- **[Animal behavior](blueprint_animal_behavior.md)** (AnimalAI) — kangaroos and deer that wander the natural worlds on the navigation mesh.
+- **[Pedestrian behavior](blueprint_pedestrian_behavior.md)** — spline-following walking pedestrians (scanned-people, mannequin and character-pack variants).
+- **[Vehicle behavior](blueprint_vehicle_behavior.md)** (VehicleAI) — Chaos-vehicle traffic that steers along spline roads in the city world.
 
 [:material-download: Animal Behavior](blueprint_animal_behavior.md){ .md-button .md-button--primary }
 [:material-download: Pedestrian Behavior](blueprint_pedestrian_behavior.md){ .md-button .md-button--primary }

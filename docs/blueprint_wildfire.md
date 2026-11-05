@@ -50,7 +50,7 @@ Follow the general steps in [Using Blueprint Packages](blueprint_packages.md#ins
 
 Fire is the flagship use case for the [synthetic thermal camera](synthetic_cameras.md):
 
-* Fire actors whose mesh names contain `fire`, `flame`, or `torch` are automatically classified **hot** (1000 K, forced to maximum thermal brightness) by the [LWIR ThermalIR camera](lwir_camera.md), provided they are registered with the [instance segmentation](instance_segmentation.md) system — runtime-spawned actors need `AddNewActorToSegmentation`, see [Using Blueprint Packages](blueprint_packages.md#making-blueprints-visible-to-the-hercules-sensors).
+* Fire actors whose mesh names contain `fire`, `flame`, or `torch` are automatically classified **hot** (1000 K, forced to maximum thermal brightness) by the [LWIR ThermalIR camera](lwir_camera.md), provided they are registered with the [instance segmentation](instance_segmentation.md) system — runtime-spawned actors need `AddNewActorToInstanceSegmentation`, see [Using Blueprint Packages](blueprint_packages.md#making-blueprints-visible-to-the-hercules-sensors).
 * Anything named differently can be classified explicitly via a settings.json override:
 
 ```json

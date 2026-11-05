@@ -1,0 +1,24 @@
+{
+  "exclude": [
+    "**/Binaries/**",
+    "**/Intermediate/**",
+    "**/Saved/**",
+    "**/DerivedDataCache/**",
+    "**/Content/**",
+    "Unreal/Environments/**",
+    "Unreal/Plugins/**/Binaries/**",
+    "Unreal/Plugins/**/Intermediate/**",
+    "build/**",
+    "build_release/**",
+    "ros2/build/**",
+    "ros2/install/**",
+    "ros2/log/**",
+    "**/install/**",
+    "**/log/**",
+    "external/**",
+    "AirLib/deps/**",
+    "docs/**",
+    "hercules_figures/**",
+    "**/.codegraph/**"
+  ]
+}
