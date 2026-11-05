@@ -7,7 +7,7 @@ HERCULES adds a **physics-based long-wave infrared (LWIR) thermal camera** that 
 ## What it models
 
 - Per-object thermal emission integrated over the LWIR band using the Planck radiation law.
-- Distinct thermal signatures for warm agents (wildlife, MetaHuman pedestrians, vehicles) versus the environment.
+- Distinct thermal signatures for warm agents (wildlife, pedestrians, vehicles) versus the environment.
 - Pairs naturally with the [dynamic phenomena](dynamic_phenomena.md) (e.g. wildfire) and the [night-vision camera](night_vision.md) for low-light and search-and-rescue scenarios.
 
 ## Usage

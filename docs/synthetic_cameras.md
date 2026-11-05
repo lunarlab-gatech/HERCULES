@@ -72,7 +72,7 @@ Work through these in order:
 
 1. **Is the object in the instance segmentation at all?** Check with `client.simListInstanceSegmentationObjects()`. If it is missing:
     * Only static and skeletal meshes are supported (no landscape, foliage, brush, decals — see [instance segmentation limitations](instance_segmentation.md#limitations)).
-    * Objects **spawned at runtime** (Blueprint/C++ extensions, dynamic agents) must be registered: call `ASimModeBase::AddNewActorToSegmentation(AActor)` from C++/Blueprints, or via RPC first `simAddSegmentationActor` then `simSetSegmentationObjectID`.
+    * Objects **spawned at runtime** (Blueprint/C++ extensions, dynamic agents) must be registered: call `ASimModeBase::AddNewActorToInstanceSegmentation(Actor, UpdateAnnotation)` from C++/Blueprints, or via RPC first `simAddSegmentationActor` then `simSetSegmentationObjectID`.
     * Components tagged `InstanceSegmentation_disable` are deliberately excluded.
     * An unregistered object renders with a color that is not in the color map and classifies as **neutral** (295 K) — visible but never hot.
 2. **Does its mesh name match a keyword?** The classifier only sees the mesh name (e.g. `BP_Kangaroo23_...` matches "kangaroo"). If your object is named `SM_Blob42` it classifies as neutral. Fix it either by renaming the mesh to contain a keyword, **or set its thermal properties explicitly with an override** (no rename, no recompile):

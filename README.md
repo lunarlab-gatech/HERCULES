@@ -20,6 +20,16 @@
 
 </div>
 
+<div align="center">
+
+**🚧 Coming soon: legged robots in HERCULES — Unitree Go2 quadruped + Unitree G1 humanoid 🚧**
+
+<a href="https://lunarlab-gatech.github.io/HERCULES-website/"><img src="docs/media/go2_g1_walking_together_teaser.gif" width="92%" alt="Unitree Go2 and Unitree G1 walking together in the HERCULES outback world with their live onboard sensor panels"></a>
+
+*MuJoCo physics + RL locomotion policies, rendered in Unreal Engine with the full sensor suite (RGB, depth, segmentation, LiDAR, IMU, GPS) and ROS 2 wrappers. Captured in frame-exact lockstep: each panel is that robot's own onboard sensor data at the same simulation tick. [Full preview video on the project page.](https://lunarlab-gatech.github.io/HERCULES-website/)*
+
+</div>
+
 ---
 
 ## Overview
@@ -35,7 +45,7 @@ A novel autonomous waypoint-tracking UGV controller mirrors the UAV interface, e
 ### Highlights
 
 - **Integrated heterogeneous autonomy stack.** We re-architect the AirSim/Cosys-AirSim SimMode layer to enable **concurrent UAV–UGV operation within a single simulation session**, resolving a fundamental physics-engine conflict that previously restricted each session to one vehicle type. On top of it: a unified waypoint-level command interface, an autonomous UGV controller, an end-to-end planning pipeline, and coordinated multi-robot sensor logging.
-- **New sensor modalities & dynamic environments.** Two sensors not in Cosys-AirSim — a **long-wave infrared (LWIR)** thermal camera based on Planck-law spectral radiance, and a **night-vision (NVG)** camera with empirical photometric transfer. Parameterized dynamic-environment modules (**wildfire spread, flood inundation, crop-disease transmission**) and dynamic-agent Blueprints (MetaHuman pedestrians, VehicleAI traffic, AnimalAI wildlife) update the shared world state at runtime.
+- **New sensor modalities & dynamic environments.** Two sensors not in Cosys-AirSim — a **long-wave infrared (LWIR)** thermal camera based on Planck-law spectral radiance, and a **night-vision (NVG)** camera with empirical photometric transfer. Parameterized dynamic-environment modules (**wildfire spread, flood inundation, crop-disease transmission**) and dynamic-agent Blueprints (spline-following pedestrians, VehicleAI traffic, AnimalAI wildlife) update the shared world state at runtime.
 - **Open benchmarks & reproducible release.** Evaluation suites for collaborative SLAM (ROMAN) and multi-view 3D object detection (DAIR-V2X-style), a dataset-collection pipeline exporting synchronized multimodal data in standard formats (KITTI-style layouts, ROS 2 bags), and performance-optimized ROS 2 wrappers for direct integration with existing autonomy stacks.
 
 ---
@@ -296,7 +306,7 @@ HERCULES is under active development — here's what's in progress and coming ne
 - [ ] **Cooperative perception baselines** — release the DAIR-V2X-style multi-view 3D detection code.
 - [ ] **Multimodal dataset** — upload the full desert / forest / city sequences to Hugging Face.
 - [ ] **Sensor setup docs** — expand the LWIR and night-vision configuration and parameter references.
-- [ ] **Additional dynamic agents & environments** — more MetaHuman / VehicleAI / AnimalAI presets.
+- [ ] **Additional dynamic agents & environments** — more pedestrian / VehicleAI / AnimalAI presets.
 
 Suggestions or bugs? [Open an issue](https://github.com/lunarlab-gatech/HERCULES/issues).
 

@@ -19,7 +19,7 @@ For an example of the Instance Segmentation API, please see the script _segmenta
 For a script that generates a full list of objects and their associated color, please see the script _segmentation_generate_list.py_ (Cosys-Airsim/PythonClient/segmentation/segmentation_generate_list.py).
 
 When a new object is spawned in your environment by for example a c++ or blueprint extension you made,
-and you want it to work with the instance segmentation system, you can use the extended function `ASimModeBase::AddNewActorToSegmentation(AActor)` which is also available in blueprints.
+and you want it to work with the instance segmentation system, you can use the extended function `ASimModeBase::AddNewActorToInstanceSegmentation(AActor* Actor, bool update_annotation = true)`, which is also exposed to Blueprints (together with `DeleteActorFromInstanceSegmentation`, `ForceUpdateInstanceSegmentation` and `AddNewActorToAnnotation`). Over RPC, call `simAddSegmentationActor` and then `simSetSegmentationObjectID`.
 When controlling HERCULES via RPC, the actor name must first be registered using `simAddSegmentationActor` before calling `simSetSegmentationObjectID` on that actor.
 
 Make sure to provide human-readable names to your objects in your environment as the ground truth tables that the HERCULES API can provide will use your object naming to create the table.
