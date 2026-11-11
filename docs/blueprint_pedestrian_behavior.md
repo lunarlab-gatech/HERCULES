@@ -22,8 +22,8 @@ The zip on the [releases page](https://github.com/lunarlab-gatech/HERCULES/relea
 | `BP_SplinePath` | Path actor: just a `Spline` component | — |
 | `BP_SplineMotionHuman`, `BP_SplineMotionHumanGirl` | Follow an external `BP_SplinePath` (variable *Spline To Follow*) with a `T_Move` Timeline; `Reverse` / `ReverseFromEnd` make them ping-pong | "Survival Character" + "Military" walk / MyGirl12 |
 
-!!! tip "Free subset"
-    `BP_SplineHuman` and `Type2`–`Type5` need only the free Renderpeople pack; `Mannequin2` needs only the repo's `GroupedAI` folder (and renders with a default body material without the Military pack). Install the paid packs only for the variants you want.
+!!! tip "Almost everything is free"
+    Every pack below is free on Fab except Male 3. `BP_SplineHuman` and `Type2`–`Type5` need only the Renderpeople pack; `Mannequin2` needs only the repo's `GroupedAI` folder (and renders with a default body material without the Survivalist pack). Only `Type12`–`Type14` (and the extra materials of `Girl2`) need the paid Male 3 character; install it only if you want those variants.
 
 ## Requirements
 
@@ -34,13 +34,13 @@ The zip on the [releases page](https://github.com/lunarlab-gatech/HERCULES/relea
 | [Scanned 3D People Pack](https://www.fab.com/listings/2e872a96-686e-4955-8256-82fa19904f92) (Renderpeople, **free**) | Expected at `/Game/Scanned3DPeoplePack/RP_Character/` |
 | `GroupedAI` folder from this repository (**free**) | Copy `Unreal/Environments/DynamicObjects/Content/GroupedAI` into `Content/` — it is also the [Dynamic Objects](dynamic_objects.md) minimal walking-AI example |
 | [City Sample Crowds](https://www.fab.com/search?q=city%20sample%20crowds) (Epic, **free, optional**) | Four materials used by `Girl2`, `Type8`, `Type10`; without it those variants render with default materials |
-| "Military" character pack (`SK_Military_Survivalist_1..4`, `SM_Military_4`, `Demo_animations/Walk`) | Expected at `/Game/Military/`. Also supplies the walk animation of most non-Renderpeople variants |
-| "Survival Character" pack (`SK_Survival_Character` + demo mannequins `SKM_Manny_Simple`, `SKM_Quinn_Simple`, `MF_Walk_Fwd`) | Expected at `/Game/Survival_Character/` |
-| "MyGirl12" character (`SKM_MyGirl12`, `AS_MyGirl14_Walk`) | Expected at `/Game/MyGirl12/` |
+| [Survivalist](https://www.fab.com/listings/e1889c29-c104-4623-8239-4e11f8993215) (Slayver, **free**) — one man in four outfit variants; installs as the `Military` folder (`SK_Military_Survivalist_1..4`, `SM_Military_4`, `Demo_animations/Walk`) | Expected at `/Game/Military/`. Also supplies the walk animation of most non-Renderpeople variants. The same character is included in Slayver's paid *Modular military character* pack, which is not needed |
+| [Survival Character](https://www.fab.com/listings/11d20d01-b764-4936-8163-cb20d05c369e) (Arberry, **free**) — leather-jacket man with backpack and baseball bat (`SK_Survival_Character` + demo mannequins `SKM_Manny_Simple`, `SKM_Quinn_Simple`, `MF_Walk_Fwd`) | Expected at `/Game/Survival_Character/`. Not the seller's paid *Survival 01–05* listings |
+| [Modern Female : Winter Girl 12](https://www.fab.com/listings/fe2528a0-c818-4da2-8a12-afc93b67a65c) (BOXTANK2025, **free**) — glasses, red/black knit sweater, black pants (`SKM_MyGirl12`, `AS_MyGirl14_Walk`) | Expected at `/Game/MyGirl12/`. The listing text mentions one walk animation; the Blueprints expect it under the name `AS_MyGirl14_Walk` |
 | Male 3 (legacy Unreal Marketplace character; the seller's Fab listings [Male 4](https://www.fab.com/listings/725d8824-274f-4f8d-ab66-1afca5464a85) / Male 5 link to it) | Expected at `/Game/Male_3/` |
 
-!!! warning "Store links being confirmed"
-    The exact Fab listings for the Military, Survival Character, MyGirl12 and Male 3 packs are being confirmed from the lab's purchase history; the asset names above are what the Blueprints reference, and `MANIFEST.json` in the zip lists every expected path. No NavMesh is needed — the pedestrians follow splines, not the navigation system.
+!!! note "Checking a pack"
+    The listings above were matched to the lab's installed copies by their asset names and import paths; `MANIFEST.json` in the zip lists every asset path each Blueprint expects, so a *Failed to load* line after installing a pack tells you exactly which asset differs. Male 3 is a legacy Marketplace product without its own Fab page; the seller's Male 4 / Male 5 listings link to it. No NavMesh is needed — the pedestrians follow splines, not the navigation system.
 
 ## Install into your Unreal project
 
