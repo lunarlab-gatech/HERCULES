@@ -79,7 +79,7 @@ Crowd density is simply the number of actors you place; there is no spawner. To 
 
 * **No registration call is needed** for placed pedestrians: they are added to [instance segmentation](instance_segmentation.md) automatically at simulation start. Only actors spawned at runtime need `AddNewActorToInstanceSegmentation` — see [Using Blueprint Packages](blueprint_packages.md#making-blueprints-visible-to-the-hercules-sensors).
 * The [LWIR thermal camera](synthetic_cameras.md) classifies warm bodies by the (case-insensitive) keywords `human` or `person` in the segmentation name, which for these single-mesh actors is the actor name — `BP_SplineHuman_Type3_...` and `BP_SplineMotionHuman_...` already match. If you rename actors, keep `Human` in the name or add an `Overrides` entry matching your name.
-* For [object detection](object_detection.md), filter on the actor names, e.g. `simAddDetectionFilterMeshName(camera, ImageType.Scene, "BP_SplineHuman*")`. The `Debug_Object_Detection_Level` of the city project is a small ready-made scene (one car, two pedestrians, six paths) for testing this.
+* For [object detection](object_detection.md), filter on the actor names, e.g. `simAddDetectionFilterMeshName(camera, ImageType.Scene, "BP_SplineHuman*")`. A small test scene is one `BP_VehicleAI` on a `BP_SplineRoad` plus two `BP_SplineHuman` variants; the detection boxes follow the moving actors.
 * Pedestrians at night are a natural target for the [night-vision camera](night_vision.md) in search-and-rescue style scenarios.
 
 See the [Dynamic Environmental Phenomena](dynamic_phenomena.md) overview and the [Environments](index.md#environments) for these agents in context.
